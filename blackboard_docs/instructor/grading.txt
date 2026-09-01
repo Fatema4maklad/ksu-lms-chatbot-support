@@ -1,0 +1,47 @@
+
+Grading
+The grading workflow starts before students have submitted any work. An important part of the grading workflow is to configure your grading settings and customizing your Gradebook to prepare for the term.
+At the beginning of the term
+Before you start teaching, it's worth spending time in a few places:
+Explore and customize your gradebook:
+Customize how your gradebook looks and behaves, including Student options (choose whether to display student name or student ID) and whether to include students who no longer have access to the course. Refer to
+Navigate the Gradebook
+and
+Gradebook Settings
+.
+Configure grading settings:
+In Gradebook Settings, you can configure course rubrics, grade categories, and more. In addition to course-wide settings in Gradebook Settings, assessments have item-specific settings. In
+Assessment Settings
+, you can define grade category and how the assessment is graded, set number of attempts allowed and which attempt to grade, select another type of grading (anonymous, delegated), and configure when grades and feedback are released to students.
+Understand how grades are calculated then set up calculations:
+Decide on a grade schema, whether to use automatic zeros, and how your overall grade is calculated. Refer to
+How Grades are Calculated
+.
+Set up attendance:
+You can set up and manage attendance at any time throughout the term. If you would like attendance to count as a grade, we recommend setting it up at the start of the term. Refer to
+Attendance
+.
+Throughout the term
+Manage accommodations, exceptions, and exemptions:
+You can set these at the beginning of the term or throughout the term. Refer to
+Accommodations
+and
+Grant Item-Level Accommodations and Exemptions
+.
+Grade assessments:
+Grade assessments in a timely manner by regularly clearing
+your action items
+.
+Post grades:
+After grading an assessment, post the grade and feedback so that the students can access it. Refer to
+Post Grades
+.
+At the end of the term
+Share final grades with your institution:
+If your institution has a Grades Export enabled, submit your final grades. Refer to
+Grade Export
+.
+Grading
+At the beginning of the term
+Throughout the term
+At the end of the term

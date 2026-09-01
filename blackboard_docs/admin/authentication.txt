@@ -1,0 +1,23 @@
+Administrator: Authentication
+
+Authentication ensures secure and seamless access for Blackboard users across all roles. This section guides administrators through the configuration and management of authentication systems, including planning, implementation, and troubleshooting.
+
+Core Authentication Framework
+System Management: Configure core framework settings and manage user session lengths.
+Monitoring: Access and review authentication logs to track user login activity and troubleshoot access issues.
+
+Supported Provider Types and Integrations
+Detailed guidance is provided for integrating common external identity providers, including:
+
+LDAP: Lightweight Directory Access Protocol integration.
+SAML: Security Assertion Markup Language integration (including specific setup for ADFS).
+CAS: Central Authentication Service configuration.
+JIT Provisioning: Support for Just-In-Time provisioning to automatically create or update user accounts upon their first successful login.
+
+Advanced Access Configuration
+For institutions with complex access needs, administrators can tailor authentication to their organizational structure:
+
+Provider Order: Define the priority and fallback sequence when multiple authentication providers are active.
+Institutional Hierarchy Alignment: Align authentication access with the institution's distinct departments or structural nodes.
+
+Whether you are setting up for the first time or refining an existing configuration, these tools and insights help maintain a secure and user-friendly login experience.

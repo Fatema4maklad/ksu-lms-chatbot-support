@@ -1,0 +1,72 @@
+
+Blackboard LMS App
+offers a streamlined, mobile-friendly way to manage your courses for students and instructors.
+Available on iOS and Android
+Supports both Original and Ultra courses
+Optimized for small screens
+While some advanced features are only available in the web version, the app covers most day-to-day needs for both instructors and students.
+Download and log into the
+Blackboard LMS App
+Download
+the Blackboard App from the
+Apple Store
+or
+Google Play
+.
+Compatible Devices:
+iOS 14+ and Android 11+.
+Log In:
+Search for your institution in the app. If it doesnât appear, contact your schoolâs help desk.
+Language Support:
+The app is available in over 30 languages and follows your deviceâs language settings.
+Tips and troubleshooting for the
+Blackboard LMS App
+Canât Find Your School?
+Double-check the name or contact your institutionâs help desk.
+Login Issues?
+Your schoolâs IT support can help with username or password recovery.
+Logging Out:
+Select
+Menu
+, then
+Settings
+, then
+Log Out
+.
+Language Not Displaying Correctly?
+Restart the app after changing your deviceâs language settings.
+Navigation Overview of the
+Blackboard LMS App
+Activity Stream:
+Your landing page shows real-time updatesânew content, announcements, grades, and more.
+Courses:
+Select the Courses tab to access your enrolled classes. Instructors can manage content, announcements, and discussions here.
+Grades:
+Select Grades on the main menu to see a quick view of your overall grades for all courses.
+More Menu:
+Access settings, grades, messages, and tools. Instructors can also manage organizations and app preferences.
+View/Edit Profile
+Organization
+Messages
+Grades
+Tools
+BB Assist
+Settings
+Blackboard Help Center
+Key Features for Instructors on the
+Blackboard LMS App
+Create and edit content:
+Tap the plus sign in the Content tab to add materials, assignments, or tests.
+Announcements:
+Post time-sensitive updates directly from your phone.
+Grading:
+Use the Gradebook tab to review, annotate, and publish grades. Rubrics and attachments are supported.
+Discussions:
+Moderate and participate in course discussions.
+Push Notifications:
+Get alerts for new submissions, discussions, and other course activity.
+Blackboard LMS App
+Download and log into the Blackboard LMS App
+Tips and troubleshooting for the Blackboard LMS App
+Navigation Overview of the Blackboard LMS App
+Key Features for Instructors on the Blackboard LMS App

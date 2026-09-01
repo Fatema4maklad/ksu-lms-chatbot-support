@@ -1,0 +1,5 @@
+
+Courses and Organizations
+In Blackboard, you can create courses and organizations in several ways. The privileges assigned to your user account determine which methods you can use in theÂ Administrator Panel.
+If allowed, you can create new courses and organizations, copy existing courses/organizations, create multiple courses/organizations at once with a batch file, and restore and import courses/organizations.
+Use the Ultra Course View, the Original Course View, or both, based on how your Blackboard configuration at your institution.Â Instructors can use the Ultra Course PreviewÂ to see their original content in the Ultra Course View before they convert courses.

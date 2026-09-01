@@ -1,0 +1,70 @@
+Prev
+Next
+Grades
+Where are my grades?
+Your grades can appear in multiple places. Wherever you find your grade, you'll find the information you need.
+On your course's
+Grades
+page inside the relevant course
+In your activity stream
+On your global
+Grades
+page, accessed from the list where your name appears
+Inside the course
+You can access your course grades on the course's navigation bar. Select the
+Grades
+icon to access all the coursework that's specific to the course you're in.
+Then, on the
+Course Grades
+page, select a title to see the grade and feedback from your instructor.
+Activity stream
+As your instructors post grades, you'll find them in your activity stream. Select
+View your grade
+to display your grade. If your instructor added feedback, you'll see it after the item's title.
+If your instructor updates a grade, the grade is also updated in the stream.
+Your global Grades page
+To see your grades for all your courses in one place, select
+Grades
+from the list on the left where your name appears. All of your grades are organized by course. You can see what's due and set priorities across all of your courses. No need to navigate to each course individually.
+Grade pills
+Your instructor determines how to display your grade for each graded item:
+Letter grade
+Points
+Percentage
+The grade pill for each assessment question and graded item may appear in colors or with dark backgrounds.
+For the colored grade pills, the highest score range is green and the lowest is red. At this time, your instructors can't change the colors or the percentages. The colors map to these percentages:
+> 90% = green
+89â80% = yellow/green
+79â70% = yellow
+69â60% = orange
+59â50% = red
+Your institution can disable the color scheme for all courses. The grade pills appear with dark backgrounds and white grades. Colors won't be used to convey performance.
+How do my grades compare to others?
+You can use
+learning analytics
+to find out where you stand in relation to your classmates and plan how to improve your position.
+Watch a video about checking grades
+The following narrated video provides a visual and auditory representation of some of the information included on this page. For a detailed description of what is portrayed in the video,
+open the video on Vimeo.
+Course Grades
+Navigate the Gradebook with JAWS
+Attendance Grades
+Assessment Grades
+Discussion Grades
+Submissions and Feedback
+Goals
+How Am I Doing?
+Grades
+Where are my grades?
+Inside the course
+Activity stream
+Your global Grades page
+Grade pills
+How do my grades compare to others?
+Watch a video about checking grades
+Search results
+No results found
+Was this helpful?
+Yes
+No
+Would you like to provide feedback? Just click here to suggest edits.

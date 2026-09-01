@@ -1,0 +1,24 @@
+
+Assessments
+Assessments in Blackboard include both assignments and tests, giving instructors flexible tools to measure student learning. This section helps you create, manage, and grade assessments that align with your course goals.
+Assessment Settings
+Formative Assessments
+Peer Review for Qualitative Peer Assessments
+Assignments
+Tests
+Forms
+Questions
+Download Assessments
+Print Assessments
+Distinguishing Assignments and Tests
+Assignments
+and
+Tests
+(grouped under
+Assessments
+in the
+Course Content Items
+panel) share the same user interface and options. Many options in the settings are enabled or disabled based on whether at least one question is included in the assessment.
+In practice, instructors use these assessments differently. For example, you might create an assignment with instructions for students to submit a file for a grade. In a test, students may answer a series of questions youâve added to the assessment.
+Assessments
+Distinguishing Assignments and Tests

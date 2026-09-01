@@ -1,0 +1,34 @@
+
+Assessments
+Assessments help you show what youâve learned and stay on track in your courses. This section explains the tools youâll use to complete assignments and tests, work with classmates, and share feedback.
+Whether youâre preparing for an assessment, working on a group project, or submitting your work, these topics guide you through each step. Youâll also find tips for peer review and ways to make sure your submissions meet your instructorâs requirements.
+
+Access Your Assessments
+Updated on 2026-07-14
+
+You can access assessments in multiple locations:
+
+    Activity Stream: New assignments appear in the activity stream. If the due date has passed, the assignment is flagged in the Important section.
+
+    Calendar: If your instructor added a due date, the assessment appears in your calendar.
+
+    Course Content Page: Assessments may be listed directly or organized within folders and learning modules. Your instructor may also include assessments in learning modules or conditional release structures.
+
+Assignment visibility and details
+
+When you select an assessment, the Details & Information panel opens. This panel includes:
+
+    Due date, including if the due date has passed
+
+    Number of attempts allowed
+
+    Time limit (if applicable)
+
+    Goals and rubric (if provided)
+
+Access code
+
+Your instructor might require you to input a 6-digit access code to access the assessment. Instructors issue the access codes, but they might have another person, such as a proctor, deliver the codes.
+
+After you type the code, you can open the assessment. You can use the code to resume an assessment you saved. You don't need the code to view your grades and feedback posted by your instructor. If your instructor changes the code between attempts, you'll need to ask for it again.
+

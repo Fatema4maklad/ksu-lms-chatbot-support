@@ -1,0 +1,55 @@
+Administrator: Getting Started
+
+This guide outlines key setup and maintenance tasks for administrators managing Blackboard LMS at universities and organizations. Administrators are responsible for provisioning the platform, aligning system preferences with institutional needs, and defining user roles.
+
+Access and Authentication
+Configuring access is a critical first step. This includes logging into the Administrator Panel and setting up roles:
+
+* Log into the Administrator Panel: Navigate to the institution's Blackboard URL, enter administrator credentials, select Login, and click 'Admin' in the side navigation panel.
+* Authentication Framework & Planning: Evaluate institutional needs and configure how users securely access the system, including external identity integrations.
+* System Roles: Assign specific administrative privileges (e.g., granting instructors user management access) without giving full system admin rights.
+* Institutional Hierarchy: Mirror the organization's structure (colleges, departments, programs) within Blackboard to enable targeted administration and reporting.
+
+Course Management
+Course management ensures a smooth academic experience for faculty and students:
+
+* Academic Terms and Templates: Organize courses by semester/quarter and use templates for consistent course structure.
+* Automate Course Creation: Use Student Information System (SIS) integration (like Snapshot Flat File) or Batch file uploads to sync and create courses in bulk.
+* Availability and Enrollment: Configure access dates, visibility rules, and assign users (instructors, teaching assistants, students) to courses.
+
+User Management
+Maintain accurate access and permissions across the Blackboard LMS:
+
+* Import Users: Use Batch files or SIS integration (Snapshot Flat File) to create and sync user accounts in bulk.
+* Institutional Roles: Define a user's primary function (e.g., student, instructor) to dictate their access and course interaction capabilities.
+* Delegated Administration: Distribute specific administrative tasks to users while maintaining core system security.
+
+Tool Configuration and Storage
+Manage the tools and content limits to maintain system performance:
+
+* Activate Tools: Enable or disable built-in tools based on licensing and institutional needs.
+* Content Storage Quotas: Set individual course quotas and file size upload limits to prevent excessive storage use.
+* Repositories: Manage the Learning Object Repository (for shared, reusable materials) and the Content Collection (for central file storage and version control).
+* LTI Integrations: Connect third-party educational applications (e.g., Turnitin, Zoom, Panopto) using Learning Tools Interoperability.
+
+Branding and Navigation
+
+* Institution Branding: Apply custom logos, color schemes, and customized login pages.
+* Base Navigation: Provide a modern, streamlined interface for accessing courses, grades, and messages.
+
+Accessibility and Privacy
+
+* Accessibility: Blackboard LMS supports WCAG 2.2 AA. Use Anthology Ally to generate alternative formats, provide instructor feedback, and review institutional accessibility scores.
+* Data Privacy: Ensure FERPA compliance through role-based access, secure authentication, and proper data handling policies.
+
+Monitoring, Maintenance, and Analytics
+
+* System Health: Review system logs and health dashboards to monitor uptime and troubleshoot issues.
+* Release Notes: Track monthly SaaS updates, new features, and bug fixes.
+* Analytics and Reporting: Use Anthology Illuminate for data visualization on student success, and Anthology Adopt for in-app messaging, digital walkthroughs, and usage insights.
+* Support: Serve as the first line of support for help desk tickets and login issues.
+
+End-of-Term Tasks
+
+* Archive and Export: Preserve instructional content and user data for future audits, retention policies, or course reuse.
+* Next Term Prep: Review institutional settings, create new academic structures, and communicate updates to faculty.

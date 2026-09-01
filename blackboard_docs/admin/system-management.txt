@@ -1,0 +1,5 @@
+
+System Management
+System Management covers the core administrative functions that keep your Blackboard environment stable, scalable, and aligned with institutional structure. This section helps you configure and maintain key system settings, monitor performance, and generate reports that support decision-making.
+Topics include managing institutional hierarchy, scheduling maintenance tasks, and setting file upload limits. You'll also find guidance on interpreting system logs, configuring cloud services, and refreshing ETL processes. Reporting tools such as the Activity Accumulator, Administrator Insight Report, and storage usage dashboards provide visibility into platform usage and trends.
+System Management equips you with the tools to ensure your Blackboard instance runs smoothly and meets the evolving needs of your institution.

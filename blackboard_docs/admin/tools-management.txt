@@ -1,0 +1,16 @@
+
+The Tools Management section provides guidance for configuring and maintaining the wide range of features and integrations available within Blackboard.
+From core tools like announcements, attendance, and messaging to advanced capabilities such as analytics, outcomes assessment, and enterprise surveys, this section helps administrators tailor the platform to meet institutional goals.
+You'll find resources for managing third-party integrations (e.g., Cengage, SCORM, Partner Cloud), enabling AI-powered assistants and configuring tools like Video Studio or Anthology Adopt.
+Administrator: Tools Management
+
+The Tools Management section provides guidance for configuring and maintaining the wide range of features and integrations available within Blackboard.
+
+Core Tools and Advanced Capabilities
+Administrators can tailor the platform to meet institutional goals by managing core tools like announcements, attendance, and messaging, as well as advanced capabilities such as analytics, outcomes assessment, and enterprise surveys.
+
+Third-Party Integrations and Add-ons
+This section provides resources for managing third-party integrations, including Cengage, SCORM, and Partner Cloud.
+
+AI and Specialized Tools
+Administrators can also find guidance on enabling AI-powered assistants and configuring specialized tools like Video Studio or Anthology Adopt.

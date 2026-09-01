@@ -1,0 +1,3 @@
+User Management
+Create and manage your users from the Administrator Panel.
+From a central location, you can create users in your system, enroll them in their courses, and make sure they have the appropriate permissions.

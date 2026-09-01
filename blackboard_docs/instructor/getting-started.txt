@@ -1,0 +1,24 @@
+Instructor: Getting Started
+
+Welcome to Blackboard LMS! These topics walk you through the essentials — signing in, finding your way around, and using the tools that support everyday teaching.
+
+Sign in and set up your account
+Log into Blackboard LMS, confirm your browser works, and configure the personal settings that shape your day-to-day experience.
+
+* Quick Start Course Checklist: A checklist for setting up your account and building your course.
+* Browser Support: Lists the browsers Blackboard LMS supports and includes a checker to confirm yours is compatible.
+* Your Account: Add your profile, manage notifications, and set up your display language.
+* Log into Blackboard and Login Troubleshooting: Covers logging in and common solutions for common login issues.
+* Find institutional support: Many common Blackboard LMS issues can't be handled by Blackboard. See this list and find a link to your institutional support page.
+* Blackboard App (mobile app): Blackboard LMS App offers a streamlined, mobile-friendly way to manage your courses for students and instructors.
+* Accessibility Overview: Learn about accessibility tips your courses and how Blackboard covers them.
+
+Navigate inside your course
+Learn where your courses live and how to move between the global Blackboard LMS environment and the inside of an individual course.
+
+* Navigate Inside a Course: Introduces the course layout, including the Content, Calendar, Discussions, Gradebook, and Messages tabs.
+
+Navigate inside Blackboard LMS
+Use the pages and tools that pull information from all your courses into one place so you can plan your day and stay on top of deadlines.
+
+* Navigate Outside a Course: Shows how to use the global menu and base navigation to reach tools, messages, and pages that live outside any single course.
