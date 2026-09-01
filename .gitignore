@@ -1,0 +1,19 @@
+# Python / Environments
+venv/
+__pycache__/
+*.pyc
+.env
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+
+# ChromaDB / Local Vector Data
+chroma_db/
+*.db
+*.sqlite3
+
+# OS / Editor files
+.vscode/
+.DS_Store
