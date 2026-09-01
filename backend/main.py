@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="KSU LMS Chatbot API")
+app = FastAPI()
 
+# Enable CORS so your React frontend (port 5173) can talk to FastAPI (port 8000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -11,6 +12,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-async def root():
-    return {"message": "KSU LMS Chatbot API is running"}
+@app.get("/api/test")
+def test_connection():
+    return {"message": "تم الاتصال بالخادم بنجاح "}

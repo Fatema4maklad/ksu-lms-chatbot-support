@@ -1,22 +1,38 @@
 import { useEffect, useState } from 'react'
 
 function App() {
-  const [apiMessage, setApiMessage] = useState('Connecting to backend...')
+  const [status, setStatus] = useState('جاري الاتصال بالخادم...')
+  const [isSuccess, setIsSuccess] = useState(false)
 
   useEffect(() => {
-    // Calls the FastAPI server running locally
-    fetch('http://127.0.0.1:8000/')
-      .then(response => response.json())
-      .then(data => setApiMessage(data.message))
-      .catch(error => setApiMessage('Backend offline'))
+    fetch('http://localhost:8000/api/test')
+      .then(res => {
+        if (!res.ok) throw new Error('Network error')
+        return res.json()
+      })
+      .then(data => {
+        setStatus(data.message)
+        setIsSuccess(true)
+      })
+      .catch(() => {
+        setStatus('فشل الاتصال بالخادم (تأكد من تشغيل FastAPI على المنفذ 8000)')
+        setIsSuccess(false)
+      })
   }, [])
 
   return (
-    <div className="flex h-screen items-center justify-center bg-slate-100">
-      <div className="p-8 rounded-lg shadow-lg bg-white border border-slate-200">
-        <h1 className="text-2xl font-bold text-blue-800">
-          Status: {apiMessage}
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center p-4">
+      <div className="bg-white p-8 rounded-xl shadow-md max-w-md w-full text-center">
+        <h1 className="text-xl font-bold text-slate-800 mb-4">
+          نظام دعم Blackboard — KSU
         </h1>
+        <div
+          className={`p-4 rounded-lg font-medium ${
+            isSuccess ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-800'
+          }`}
+        >
+          {status}
+        </div>
       </div>
     </div>
   )
