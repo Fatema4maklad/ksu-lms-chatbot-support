@@ -7,10 +7,37 @@
   flex-direction: column;
   height: 80vh;
   font-family: sans-serif;
+  background: white;
+  direction: ltr; /* Locks the entire app structure Left-to-Right */
+}
+
+.input-area {
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+  background: white;
+  border-radius: 0 0 8px 8px;
+  direction: ltr; /* Locks input left, button right */
+}
+
+.message-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  max-width: 85%;
+  direction: ltr; /* Locks Bot icon left, bubble right */
+}
+
+.message {
+  padding: 12px 18px;
+  border-radius: 20px;
+  line-height: 1.6;
+  text-align: start; /* Forces Arabic to align right, English to align left */
+  unicode-bidi: plaintext; /* Helps the browser detect text direction per-paragraph */
 }
 
 header {
-  background: #005eb8; /* KSU Blue */
+  background: #005eb8;
   color: white;
   padding: 1rem;
   text-align: center;
@@ -23,58 +50,91 @@ header {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 15px;
   background: #f9f9f9;
 }
 
-.message {
-  padding: 10px 15px;
-  border-radius: 20px;
-  max-width: 75%;
-  line-height: 1.5;
+
+
+.message-wrapper.user {
+  align-self: flex-end;
+  flex-direction: row-reverse;
 }
 
-.message.user {
+.message-wrapper.bot {
+  align-self: flex-start;
+}
+
+.sender-icon {
+  font-size: 1.5rem;
+  background: #e0e0e0;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #ccc;
+}
+
+
+.message-wrapper.user .message {
   background: #005eb8;
   color: white;
-  align-self: flex-end;
-  border-bottom-right-radius: 2px;
+  border-bottom-right-radius: 4px;
 }
 
-.message.bot {
-  background: #e0e0e0;
-  color: black;
-  align-self: flex-start;
-  border-bottom-left-radius: 2px;
-  white-space: pre-wrap;
-}
-
-.input-area {
-  display: flex;
-  padding: 1rem;
-  border-top: 1px solid #ccc;
+.message-wrapper.bot .message {
   background: white;
-  border-radius: 0 0 8px 8px;
+  color: black;
+  border: 1px solid #e0e0e0;
+  border-bottom-left-radius: 4px;
 }
+
+/* Clean up markdown margins */
+.message p {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.message p:last-child {
+  margin-bottom: 0;
+}
+
+.message ul, .message ol {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+  padding-inline-start: 1.5rem; /* Better for RTL lists */
+}
+
+
 
 input {
   flex: 1;
-  padding: 10px;
+  padding: 12px;
   border: 1px solid #ccc;
-  border-radius: 4px;
+  border-radius: 6px;
   font-size: 16px;
 }
 
 button {
   margin-left: 10px;
-  padding: 10px 20px;
+  padding: 10px 24px;
   background: #005eb8;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
+  font-weight: bold;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+button:hover {
+  background: #004a94;
 }
 
 button:disabled {
   background: #ccc;
+  cursor: not-allowed;
 }
