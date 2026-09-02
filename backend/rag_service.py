@@ -8,7 +8,7 @@ API_KEY = os.getenv("GEMINI_API_KEY")
 
 CHROMA_BASE = "http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections"
 EMBED_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={API_KEY}"
-GEN_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent?key={API_KEY}"
+GEN_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key={API_KEY}"
 
 def get_collection_id(name="ksu_lms_docs"):
     res = requests.get(f"{CHROMA_BASE}/{name}")
@@ -22,7 +22,8 @@ def embed_query(query: str):
         "model": "models/gemini-embedding-001",
         "content": {"parts": [{"text": query}]},
         "taskType": "RETRIEVAL_QUERY"
-    })
+    }, timeout=10) # <-- Added timeout here
+    
     if res.status_code == 200:
         return res.json()["embedding"]["values"]
     raise RuntimeError(f"Embedding failed: {res.text}")
@@ -65,19 +66,25 @@ def ask_lms_assistant(question: str):
         "generationConfig": {"temperature": 0.2}
     }
     
-    # Retry loop: Try up to 3 times if the free tier is busy
     max_retries = 3
     for attempt in range(max_retries):
-        res = requests.post(GEN_URL, json=payload)
-        
-        if res.status_code == 200:
-            return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+        try:
+            # <-- Added timeout=10 here to prevent the infinite hang
+            res = requests.post(GEN_URL, json=payload, timeout=40)
             
-        elif res.status_code == 503:
-            print(f"⚠️ Free tier busy. Retrying in {2 ** attempt} seconds...")
-            time.sleep(2 ** attempt)  # Waits 1 sec, then 2 sec, then 4 sec
+            if res.status_code == 200:
+                return res.json()["candidates"][0]["content"]["parts"][0]["text"]
+                
+            elif res.status_code == 503:
+                print(f"⚠️ Free tier busy. Retrying in {2 ** attempt} seconds...")
+                time.sleep(2 ** attempt)
+                continue
+                
+            return f"Error: {res.text}"
+            
+        except requests.exceptions.Timeout:
+            print(f"⚠️ Request timed out. Retrying in {2 ** attempt} seconds...")
+            time.sleep(2 ** attempt)
             continue
             
-        return f"Error: {res.text}"
-        
     return "عذراً، النظام يواجه ضغطاً عالياً حالياً. يرجى المحاولة مرة أخرى بعد قليل."
