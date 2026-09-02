@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react';
+import ReactMarkdown from 'react-markdown'; // <-- Add this import
+import './App.css';
 
 function App() {
   const [apiMessage, setApiMessage] = useState('Connecting to backend...')
@@ -22,4 +24,4 @@ function App() {
   )
 }
 
-export default App
+export default App;

@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "postinstall": "prisma skills sync || exit 0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.19.3",
+    "prisma": "^6.19.3"
+  },
+  "dependencies": {
+    "react-markdown": "^10.1.0"
+  }
+}
