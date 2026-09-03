@@ -8,32 +8,7 @@
   height: 80vh;
   font-family: sans-serif;
   background: white;
-  direction: ltr; /* Locks the entire app structure Left-to-Right */
-}
-
-.input-area {
-  display: flex;
-  padding: 1rem;
-  border-top: 1px solid #ccc;
-  background: white;
-  border-radius: 0 0 8px 8px;
-  direction: ltr; /* Locks input left, button right */
-}
-
-.message-wrapper {
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  max-width: 85%;
-  direction: ltr; /* Locks Bot icon left, bubble right */
-}
-
-.message {
-  padding: 12px 18px;
-  border-radius: 20px;
-  line-height: 1.6;
-  text-align: start; /* Forces Arabic to align right, English to align left */
-  unicode-bidi: plaintext; /* Helps the browser detect text direction per-paragraph */
+  direction: ltr;
 }
 
 header {
@@ -42,19 +17,31 @@ header {
   padding: 1rem;
   text-align: center;
   border-radius: 8px 8px 0 0;
+  margin: 0;
+}
+
+header h2 {
+  margin: 0;
+  font-size: 1.25rem;
 }
 
 .messages-area {
   flex: 1;
-  padding: 1rem;
+  padding: 1.5rem;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 15px;
-  background: #f9f9f9;
+  gap: 16px;
+  background: #f0f4f8;
 }
 
-
+.message-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  max-width: 85%;
+  direction: ltr;
+}
 
 .message-wrapper.user {
   align-self: flex-end;
@@ -66,33 +53,41 @@ header {
 }
 
 .sender-icon {
-  font-size: 1.5rem;
-  background: #e0e0e0;
+  font-size: 1.2rem;
+  background: #ffffff;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border: 1px solid #ccc;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-
-.message-wrapper.user .message {
-  background: #005eb8;
-  color: white;
-  border-bottom-right-radius: 4px;
+.message {
+  padding: 14px 18px;
+  line-height: 1.6;
+  text-align: start;
+  unicode-bidi: plaintext;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
 
 .message-wrapper.bot .message {
-  background: white;
-  color: black;
-  border: 1px solid #e0e0e0;
-  border-bottom-left-radius: 4px;
+  background: #ffffff;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px 16px 16px 4px;
 }
 
-/* Clean up markdown margins */
+.message-wrapper.user .message {
+  background: #005eb8;
+  color: #ffffff;
+  border: none;
+  border-radius: 16px 16px 4px 16px;
+}
+
 .message p {
   margin-top: 0;
   margin-bottom: 0.5rem;
@@ -105,10 +100,46 @@ header {
 .message ul, .message ol {
   margin-top: 0.5rem;
   margin-bottom: 0;
-  padding-inline-start: 1.5rem; /* Better for RTL lists */
+  padding-inline-start: 1.5rem;
 }
 
+.options-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
 
+.option-chip {
+  background: #f8fafc;
+  color: #005eb8;
+  border: 1px solid #cbd5e1;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0;
+}
+
+.option-chip:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+}
+
+.input-area {
+  display: flex;
+  padding: 1rem;
+  border-top: 1px solid #ccc;
+  background: white;
+  border-radius: 0 0 8px 8px;
+  direction: ltr;
+}
 
 input {
   flex: 1;
@@ -116,6 +147,11 @@ input {
   border: 1px solid #ccc;
   border-radius: 6px;
   font-size: 16px;
+}
+
+input:focus {
+  outline: none;
+  border-color: #005eb8;
 }
 
 button {
@@ -130,11 +166,70 @@ button {
   transition: background 0.2s;
 }
 
-button:hover {
+button:hover:not(:disabled) {
   background: #004a94;
 }
 
 button:disabled {
-  background: #ccc;
+  background: #cbd5e1;
   cursor: not-allowed;
+}
+.option-chip.back-btn {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+  font-weight: 700;
+}
+
+.option-chip.back-btn:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+}
+/* Feedback UI Styles */
+.feedback-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e2e8f0;
+  font-size: 0.85rem;
+  color: #64748b;
+  direction: rtl; /* Keeps the prompt text on the right */
+}
+
+.feedback-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  font-size: 1.1rem;
+  margin: 0;
+  opacity: 0.4;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+.feedback-btn:hover:not(:disabled) {
+  transform: scale(1.2);
+  opacity: 1;
+  background: none;
+}
+
+.feedback-btn.active {
+  opacity: 1;
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+/* Home Button Style */
+.option-chip.restart-btn {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.option-chip.restart-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
