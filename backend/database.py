@@ -1,46 +1,22 @@
-# TEMPORARY MOCK — replace once teammate's real DB layer is ready.
+from sqlalchemy import create_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-_users = []
-_sessions = []
-_agents = []
-_agent_sessions = []
+# For local testing. Swap with your Supabase/Postgres URL later: 
+# SQLALCHEMY_DATABASE_URL = "postgresql://user:password@localhost/dbname"
+SQLALCHEMY_DATABASE_URL = "sqlite:///./ksu_lms.db"
 
-class FakeDB:
-    def query_user_by_university_id(self, university_id):
-        for u in _users:
-            if u.university_id == university_id:
-                return u
-        return None
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args={"check_same_thread": False} # Only needed for SQLite
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-    def add_user(self, user):
-        _users.append(user)
-    def query_agent_by_email(self, email):
-        for a in _agents:
-            if a.email == email:
-                return a
-        return None
+Base = declarative_base()
 
-    def add_agent(self, agent):
-        _agents.append(agent)
-
-    def add_agent_session(self, session):
-        _agent_sessions.append(session)
-
-    def query_agent_session_by_token(self, token):
-        for s in _agent_sessions:
-            if s.token == token:
-                return s
-        return None
-    def add_session(self, session):
-        _sessions.append(session)
-
+# Dependency to inject into your routers
 def get_db():
-    yield FakeDB()
-
-def _seed():
-    from models import Agent
-    from passlib.hash import bcrypt
-    if not _agents:
-        _agents.append(Agent(name="Test Agent", email="agent@ksu.edu.sa", password_hash=bcrypt.hash("test1234")))
-
-_seed()
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

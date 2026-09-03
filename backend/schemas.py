@@ -6,7 +6,7 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     session_token: str
-    user_id: str
+    university_id: str
     name: str
 
 class AgentLoginRequest(BaseModel):

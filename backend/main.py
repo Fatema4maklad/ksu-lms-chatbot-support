@@ -4,7 +4,25 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rag_service import ask_lms_assistant
-from routers import auth, agent_auth
+from routers import auth
+
+from database import engine, Base, SessionLocal
+from models import Agent
+from passlib.hash import bcrypt
+
+Base.metadata.create_all(bind=engine)
+
+# Seed the test agent if it doesn't exist
+db = SessionLocal()
+if not db.query(Agent).filter(Agent.email == "agent@ksu.edu.sa").first():
+    test_agent = Agent(
+        name="Test Agent", 
+        email="agent@ksu.edu.sa", 
+        password_hash=bcrypt.hash("test1234")
+    )
+    db.add(test_agent)
+    db.commit()
+db.close()
 
 # Add backend directory to path to prevent module import errors
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -20,9 +38,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register auth routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(agent_auth.router, prefix="/api")
+# Register auth router (Removed agent_auth, removed prefix to match React)
+app.include_router(auth.router)
 
 # This exact variable name "question" prevents the 422 Unprocessable Content error
 class ChatRequest(BaseModel):

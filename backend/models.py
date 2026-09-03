@@ -1,27 +1,38 @@
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from database import Base
 import uuid
-from datetime import datetime
 
-class User:
-    def __init__(self, name: str, university_id: str):
-        self.id = uuid.uuid4()
-        self.name = name
-        self.university_id = university_id
+class User(Base):
+    __tablename__ = "users"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    university_id = Column(String, unique=True, index=True)
+    name = Column(String)
 
-class UserSession:
-    def __init__(self, token: str, user_id, expires_at: datetime):
-        self.token = token
-        self.user_id = user_id
-        self.expires_at = expires_at
+class UserSession(Base):
+    __tablename__ = "user_sessions"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey("users.id"))
+    expires_at = Column(DateTime)
 
-class Agent:
-    def __init__(self, name: str, email: str, password_hash: str):
-        self.id = uuid.uuid4()
-        self.name = name
-        self.email = email
-        self.password_hash = password_hash
+class Agent(Base):
+    __tablename__ = "agents"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String)
+    email = Column(String, unique=True, index=True)
+    password_hash = Column(String)
 
-class AgentSession:
-    def __init__(self, token: str, agent_id, expires_at: datetime):
-        self.token = token
-        self.agent_id = agent_id
-        self.expires_at = expires_at
+class AgentSession(Base):
+    __tablename__ = "agent_sessions"
+    __table_args__ = {'extend_existing': True}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    token = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    agent_id = Column(Integer, ForeignKey("agents.id"))
+    expires_at = Column(DateTime)
