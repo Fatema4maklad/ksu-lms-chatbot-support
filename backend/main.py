@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from rag_service import ask_lms_assistant
-from routers import auth
+from routers import auth, agent_auth
 
 # Add backend directory to path to prevent module import errors
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -19,6 +19,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Register auth routers
+app.include_router(auth.router, prefix="/api")
+app.include_router(agent_auth.router, prefix="/api")
 
 # This exact variable name "question" prevents the 422 Unprocessable Content error
 class ChatRequest(BaseModel):
