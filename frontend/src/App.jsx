@@ -8,8 +8,10 @@ const categoryTree = {
     "الشؤون الأكاديمية",
     "مشكلة تقنية عامة"
   ],
+  
+  // Level 2: Sub-categories
   "الدخول والحسابات": [
-    "تسجيل الدخول",
+    "تسجيل الدخول واسم النظام",
     "كلمة المرور",
     "مشاكل الحساب والبيانات"
   ],
@@ -19,9 +21,48 @@ const categoryTree = {
     "الدرجات"
   ],
   "مشكلة تقنية عامة": [
-    "رسالة خطأ",
-    "رفع أو تحميل الملفات",
+    "رسائل الخطأ",
+    "رفع وتحميل الملفات",
     "أخرى (اكتب مشكلتك)"
+  ],
+
+  // Level 3: Pre-made Questions (Leaf Nodes)
+  "تسجيل الدخول واسم النظام": [
+    "كيف أسجل دخولي للنظام؟",
+    "ما هو الرابط الصحيح لنظام البلاك بورد؟"
+  ],
+  "كلمة المرور": [
+    "نسيت كلمة السر",
+    "كلمة السر صحيحة ولكن النظام لا يعمل",
+    "كيف أغير كلمة المرور؟"
+  ],
+  "مشاكل الحساب والبيانات": [
+    "كيف أقوم بتحديث بياناتي الشخصية؟",
+    "حسابي مقفل أو غير مفعل"
+  ],
+  "المقررات": [
+    "أين أجد مقرراتي الدراسية؟",
+    "محتوى المقرر أو المحاضرات لا تفتح",
+    "كيف أتواصل مع أستاذ المقرر؟"
+  ],
+  "الحذف والإضافة": [
+    "أضفت مقرر في البوابة ولم يظهر في البلاك بورد",
+    "حذفت مقرر وما زال يظهر لي",
+    "متى تتحدث المقررات في النظام؟"
+  ],
+  "الدرجات": [
+    "أين أجد درجاتي للواجبات والاختبارات؟",
+    "الدرجة غير ظاهرة لي",
+    "كيف أعرف تفاصيل الدرجة والملاحظات؟"
+  ],
+  "رسائل الخطأ": [
+    "يظهر لي (Access Denied)",
+    "النظام معلق أو الصفحة لا تفتح"
+  ],
+  "رفع وتحميل الملفات": [
+    "لا أستطيع رفع الواجب أو الاختبار",
+    "الملف المرفق حجمه كبير جداً",
+    "لا أستطيع تحميل ملفات المقرر"
   ]
 };
 
@@ -39,9 +80,11 @@ function App() {
   const [currentOptions, setCurrentOptions] = useState(categoryTree["الرئيسية"]);
 
   const handleOptionClick = (option) => {
+    // If the option exists as a key in the tree, show its children
     if (categoryTree[option]) {
       setCurrentOptions(categoryTree[option]);
     } else {
+      // If it has no children, it's a final question. Send it to the bot.
       let textToSend = option === "أخرى (اكتب مشكلتك)" ? "مشكلة أخرى" : option;
       sendUserText(textToSend);
       setCurrentOptions([]); 
@@ -53,7 +96,6 @@ function App() {
   };
 
   const handleFeedback = (index, type) => {
-    // Update local state to show selection. In the future, send this to your FastAPI database.
     setMessages((prev) => prev.map((msg, i) => 
       i === index ? { ...msg, feedback: type } : msg
     ));
@@ -113,7 +155,6 @@ function App() {
                 msg.content
               )}
               
-              {/* Feedback Widget - Only show on Bot responses, skip the first greeting */}
               {msg.role === 'bot' && index !== 0 && (
                 <div className="feedback-container">
                   <span className="feedback-text">هل كان هذا الرد مفيداً؟</span>
@@ -145,7 +186,7 @@ function App() {
           <>
             {currentOptions !== categoryTree["الرئيسية"] && (
               <button type="button" className="option-chip back-btn" onClick={resetMenu}>
-                ↩ عودة
+                ↩ القائمة الرئيسية
               </button>
             )}
             {currentOptions.map((opt, i) => (
