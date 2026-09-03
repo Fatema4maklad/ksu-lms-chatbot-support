@@ -2,20 +2,21 @@ import os
 import glob
 import uuid
 import requests
-from dotenv import load_dotenv
-
-# Load API key
-load_dotenv(dotenv_path="../.env")
-API_KEY = os.getenv("GEMINI_API_KEY")
-
-if not API_KEY:
-    raise ValueError("GEMINI_API_KEY not found in .env")
 
 # REST Endpoints
 CHROMA_BASE = "http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections"
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={API_KEY}"
-
+OLLAMA_BASE = "http://localhost:11434/api"
+OLLAMA_EMBED_MODEL = "nomic-embed-text"
 DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "blackboard_docs"))
+
+def embed_text_ollama(text: str):
+    res = requests.post(f"{OLLAMA_BASE}/embeddings", json={
+        "model": OLLAMA_EMBED_MODEL,
+        "prompt": text
+    })
+    if res.status_code == 200:
+        return res.json()["embedding"]
+    raise RuntimeError(f"Failed to embed: {res.text}")
 
 def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
     words = text.split()
@@ -27,17 +28,24 @@ def chunk_text(text: str, chunk_size: int = 500, overlap: int = 50):
             chunks.append(chunk)
     return chunks
 
-# 1. Ensure Collection Exists
+# 1. Reset Collection (Wipe old Gemini vectors and create fresh Ollama ones)
+try:
+    # Delete the old collection if it exists
+    requests.delete(f"{CHROMA_BASE}/ksu_lms_docs")
+    print("🗑️ Deleted old Gemini vector collection.")
+except Exception:
+    pass
+
+# Create fresh collection
 res = requests.post(CHROMA_BASE, json={"name": "ksu_lms_docs"})
 if res.status_code in [200, 201]:
     collection_id = res.json()["id"]
-elif res.status_code == 409 or "UniqueConstraintError" in res.text:
-    res = requests.get(f"{CHROMA_BASE}/ksu_lms_docs")
-    collection_id = res.json()["id"]
+    print("✨ Created new Ollama vector collection.")
 else:
     raise RuntimeError(f"Chroma connection failed: {res.text}")
 
 # 2. Load Documents (Recursive Search)
+# THESE TWO LINES WERE MISSING:
 txt_pattern = os.path.join(DOCS_DIR, "**", "*.txt")
 md_pattern = os.path.join(DOCS_DIR, "**", "*.md")
 
@@ -61,20 +69,15 @@ for file_path in file_paths:
     print(f"📄 Processing '{filename}' -> {len(chunks)} chunks")
 
     for i, chunk in enumerate(chunks):
-        res = requests.post(GEMINI_URL, json={
-            "model": "models/gemini-embedding-001",
-            "content": {"parts": [{"text": chunk}]},
-            "taskType": "RETRIEVAL_DOCUMENT"
-        })
-
-        if res.status_code == 200:
-            vector = res.json()["embedding"]["values"]
+        try:
+            # Call the local Ollama function instead of the Gemini API
+            vector = embed_text_ollama(chunk)
             all_ids.append(str(uuid.uuid4()))
             all_embeddings.append(vector)
             all_docs.append(chunk)
             all_metas.append({"source": filename, "chunk_index": i})
-        else:
-            print(f"⚠️ Embedding failed for {filename} [chunk {i}]: {res.text}")
+        except Exception as e:
+            print(f"⚠️ Embedding failed for {filename} [chunk {i}]: {str(e)}")
 
 # 4. Push to ChromaDB in batches
 if all_ids:
@@ -90,3 +93,4 @@ if all_ids:
         print("✅ Ingestion complete! Knowledge base is fully indexed.")
     else:
         print(f"⚠️ Chroma error during add: {add_res.text}")
+        
