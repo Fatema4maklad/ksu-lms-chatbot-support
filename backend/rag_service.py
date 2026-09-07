@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import time
 from dotenv import load_dotenv
@@ -12,6 +13,11 @@ OLLAMA_EMBED_MODEL = "nomic-embed-text" # Recommended for embeddings
 
 CHROMA_BASE = "http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections"
 
+# How many prior turns (user+assistant messages) to fold into the prompt.
+# Kept modest since qwen2.5's context window and local inference speed both
+# degrade the more history is stuffed into every request.
+MAX_HISTORY_TURNS = 6
+
 def get_collection_id(name="ksu_lms_docs"):
     res = requests.get(f"{CHROMA_BASE}/{name}")
     if res.status_code == 200:
@@ -24,7 +30,7 @@ def embed_query(query: str):
         res = requests.post(f"{OLLAMA_BASE}/embeddings", json={
             "model": OLLAMA_EMBED_MODEL,
             "prompt": query
-        }, timeout=15)
+        }, timeout=60)
         
         if res.status_code == 200:
             return res.json()["embedding"]
@@ -50,7 +56,42 @@ def search_chunks(query_vector: list, n_results: int = 3):
         return documents
     return []
 
-def ask_lms_assistant(question: str):
+
+# CJK Unified Ideographs (and related supplementary blocks) — matches
+# Chinese characters that qwen2.5 occasionally leaks despite the explicit
+# "NO CHINESE" rule in the prompt below. Prompting alone doesn't catch this
+# 100% of the time, so this is a backend safety net, not a replacement for
+# the rule.
+_CJK_PATTERN = re.compile(r'[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]+')
+
+
+def strip_chinese(text: str) -> str:
+    cleaned = _CJK_PATTERN.sub('', text)
+    # Clean up whitespace/punctuation left behind by the removal
+    cleaned = re.sub(r'[ \t]{2,}', ' ', cleaned)
+    cleaned = re.sub(r'[?？]{2,}', '?', cleaned)
+    cleaned = re.sub(r'\n{3,}', '\n\n', cleaned)
+    return cleaned.strip()
+
+
+def build_history_block(history: list) -> str:
+    """
+    Renders prior turns as a simple transcript. `history` is a list of
+    {"role": "user"|"assistant", "content": str} dicts in chronological
+    order (oldest first) and does NOT include the current question.
+    """
+    if not history:
+        return "(no prior messages in this conversation)"
+
+    recent = history[-(MAX_HISTORY_TURNS * 2):]
+    lines = []
+    for msg in recent:
+        label = "User" if msg.get("role") == "user" else "Assistant"
+        lines.append(f"{label}: {msg.get('content', '')}")
+    return "\n".join(lines)
+
+
+def ask_lms_assistant(question: str, history: list = None):
     try:
         q_vector = embed_query(question)
     except Exception as e:
@@ -58,6 +99,7 @@ def ask_lms_assistant(question: str):
 
     chunks = search_chunks(q_vector, n_results=2)
     context_text = "\n---\n".join(chunks)
+    history_text = build_history_block(history or [])
 
     system_prompt = f"""You are the official KSU Blackboard Technical Support Assistant. 
 You are highly professional and MUST follow these rules exactly:
@@ -68,7 +110,12 @@ You are highly professional and MUST follow these rules exactly:
 3. CHITCHAT: If the <user_query> is a greeting, small talk, or an insult, IGNORE the <context>. Reply politely asking how you can help.
 4. PRIMARY RAG: Try to answer the user's question using the information in the <context>.
 5. SMART FALLBACK: If the <context> does not contain the answer, DO NOT say you don't know. Instead, use your general expert knowledge about Blackboard LMS to provide a helpful, step-by-step troubleshooting answer.
+6. MEMORY: Use <conversation_history> to understand references to earlier messages (e.g. "it", "that error", "the same problem"). Do not repeat information you already gave unless asked to.
 </rules>
+
+<conversation_history>
+{history_text}
+</conversation_history>
 
 <context>
 {context_text}
@@ -89,11 +136,13 @@ You are highly professional and MUST follow these rules exactly:
     }
     
     try:
-        # Give local inference more time depending on server hardware
-        res = requests.post(f"{OLLAMA_BASE}/generate", json=payload, timeout=60)
+        # Give local inference more time depending on server hardware — the
+        # first request after Ollama starts is slow because it has to load
+        # the model into memory; a 2-minute ceiling covers that cold start.
+        res = requests.post(f"{OLLAMA_BASE}/generate", json=payload, timeout=120)
         
         if res.status_code == 200:
-            return res.json()["response"]
+            return strip_chinese(res.json()["response"])
             
         return f"Error: {res.text}"
         

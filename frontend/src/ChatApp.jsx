@@ -66,6 +66,8 @@ const categoryTree = {
   ]
 };
 
+const API_BASE = 'http://localhost:8000';
+
 function ChatApp() {
   const [messages, setMessages] = useState([
     {
@@ -73,11 +75,17 @@ function ChatApp() {
       senderType: 'ai',
       content: "Hello! I am the KSU Blackboard Support Assistant. How can I help you today?\n\nمرحباً! أنا مساعد الدعم الفني لنظام بلاك بورد بجامعة الملك سعود. يرجى اختيار الفئة المناسبة لمشكلتك أو كتابة سؤالك مباشرة.",
       feedback: null
+      // Note: no `id` on this message — it's a static greeting, never sent to
+      // the backend, so there's nothing to attach feedback to.
     }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [currentOptions, setCurrentOptions] = useState(categoryTree["الرئيسية"]);
+  // conversation_id ties every message in this browser session to one thread
+  // server-side, so the assistant can recall earlier turns. It starts null
+  // (brand-new conversation) and gets set from the first API response.
+  const [conversationId, setConversationId] = useState(null);
 
   const handleOptionClick = (option) => {
     // If the option exists as a key in the tree, show its children
@@ -95,10 +103,28 @@ function ChatApp() {
     setCurrentOptions(categoryTree["الرئيسية"]);
   };
 
-  const handleFeedback = (index, type) => {
-    setMessages((prev) => prev.map((msg, i) => 
+  const handleFeedback = async (index, type) => {
+    const message = messages[index];
+    // Only real assistant replies (persisted server-side) have an `id`.
+    // The static greeting and any client-only error bubbles don't, so
+    // there's nothing valid to log feedback against.
+    if (!message?.id) return;
+
+    setMessages((prev) => prev.map((msg, i) =>
       i === index ? { ...msg, feedback: type } : msg
     ));
+
+    try {
+      await fetch(`${API_BASE}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message_id: message.id, rating: type }),
+      });
+    } catch (error) {
+      console.error('Feedback submit failed:', error);
+      // Feedback is best-effort UI sugar — a failed network call here
+      // shouldn't interrupt the chat, so we just log it.
+    }
   };
 
   const sendUserText = async (text) => {
@@ -109,16 +135,32 @@ function ChatApp() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/api/chat', {
+      const headers = { 'Content-Type': 'application/json' };
+      const sessionToken = localStorage.getItem('user_session');
+      if (sessionToken) {
+        headers['x-session-token'] = sessionToken;
+      }
+
+      const response = await fetch(`${API_BASE}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text }), 
+        headers,
+        body: JSON.stringify({ question: text, conversation_id: conversationId }),
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'bot', content: data.answer, senderType: 'ai', feedback: null }]);
+      setConversationId(data.conversation_id);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: data.message_id,
+          role: 'bot',
+          content: data.answer,
+          senderType: 'ai',
+          feedback: null,
+        },
+      ]);
     } catch (error) {
       console.error("Fetch error:", error);
       setMessages((prev) => [...prev, { role: 'bot', content: 'Connection error. Please try again.', senderType: 'system', feedback: null }]);
@@ -155,7 +197,7 @@ function ChatApp() {
                 msg.content
               )}
               
-              {msg.role === 'bot' && index !== 0 && (
+              {msg.role === 'bot' && msg.id && (
                 <div className="feedback-container">
                   <span className="feedback-text">هل كان هذا الرد مفيداً؟</span>
                   <button 

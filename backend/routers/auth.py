@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta
-from passlib.hash import bcrypt
+import bcrypt
 import uuid
 
 from database import get_db
@@ -49,7 +49,7 @@ def user_login(payload: LoginRequest, db: Session = Depends(get_db)):
 def agent_login(payload: AgentLoginRequest, db: Session = Depends(get_db)):
     agent = db.query(Agent).filter(Agent.email == payload.email).first()
 
-    if not agent or not bcrypt.verify(payload.password, agent.password_hash):
+    if not agent or not bcrypt.checkpw(payload.password.encode(), agent.password_hash.encode()):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
     session = AgentSession(

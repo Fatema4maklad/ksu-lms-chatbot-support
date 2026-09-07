@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text
 from database import Base
+from datetime import datetime
 import uuid
 
 class User(Base):
@@ -36,3 +37,52 @@ class AgentSession(Base):
     token = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
     agent_id = Column(Integer, ForeignKey("agents.id"))
     expires_at = Column(DateTime)
+
+
+# -----------------------------------------
+# Conversational memory & feedback logging
+# -----------------------------------------
+
+class Conversation(Base):
+    """
+    One row per chat session/thread. A conversation is identified externally
+    by conversation_uuid (never the raw integer id) so the frontend can hold
+    a stable reference without ever seeing internal database keys.
+    """
+    __tablename__ = "conversations"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_uuid = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable: chat can start before/without login
+    status = Column(String, default="ai")  # "ai" | "escalated" | "closed" (escalated/closed reserved for the handoff feature)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Message(Base):
+    """
+    Every user and assistant turn in a conversation. Kept in insertion order
+    via id, which is also used to reconstruct history for the LLM prompt.
+    """
+    __tablename__ = "messages"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), index=True)
+    role = Column(String)  # "user" | "assistant"
+    content = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class Feedback(Base):
+    """
+    One row per rated assistant message. message_id is unique so re-voting
+    updates the existing rating instead of creating duplicates.
+    """
+    __tablename__ = "feedback"
+    __table_args__ = {'extend_existing': True}
+
+    id = Column(Integer, primary_key=True, index=True)
+    message_id = Column(Integer, ForeignKey("messages.id"), unique=True, index=True)
+    rating = Column(String)  # "up" | "down"
+    created_at = Column(DateTime, default=datetime.utcnow)
