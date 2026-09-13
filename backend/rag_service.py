@@ -8,7 +8,7 @@ load_dotenv(dotenv_path="../.env")
 
 # Ollama local endpoints
 OLLAMA_BASE = "http://localhost:11434/api"
-OLLAMA_LLM_MODEL = "qwen2.5" # Replace with your chosen model (e.g., mistral, aya)
+OLLAMA_LLM_MODEL = "qwen2.5:3b" # Replace with your chosen model (e.g., mistral, aya)
 OLLAMA_EMBED_MODEL = "nomic-embed-text" # Recommended for embeddings
 
 CHROMA_BASE = "http://localhost:8001/api/v2/tenants/default_tenant/databases/default_database/collections"
