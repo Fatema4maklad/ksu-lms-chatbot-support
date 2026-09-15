@@ -28,6 +28,7 @@ class Agent(Base):
     name = Column(String)
     email = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    status = Column(String, default="offline")  # "online" | "busy" | "offline"
 
 class AgentSession(Base):
     __tablename__ = "agent_sessions"

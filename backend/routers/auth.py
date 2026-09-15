@@ -52,6 +52,13 @@ def agent_login(payload: AgentLoginRequest, db: Session = Depends(get_db)):
     if not agent or not bcrypt.checkpw(payload.password.encode(), agent.password_hash.encode()):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
+    # Mark the agent online as soon as they authenticate successfully.
+    # The /ws/agent/{agent_id} presence socket (connected right after
+    # login) will keep this in sync going forward, including setting it
+    # back to "offline" automatically on disconnect.
+    agent.status = "online"
+    db.commit()
+
     session = AgentSession(
         token=str(uuid.uuid4()),
         agent_id=agent.id,

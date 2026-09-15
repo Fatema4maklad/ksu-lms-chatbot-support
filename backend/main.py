@@ -169,6 +169,61 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
 
 
 # -----------------------------------------
+# Agent presence (online/busy/offline)
+# -----------------------------------------
+
+# Tracks which agent_id is connected to which presence socket, separate
+# from the per-conversation chat sockets above.
+agent_presence_connections: dict[int, WebSocket] = {}
+
+
+async def _broadcast_presence(agent_id: int, status: str):
+    """
+    Placeholder broadcast hook for the future agent dashboard (Phase 3),
+    which will want to see other agents' status update live. No dashboard
+    listens yet, so this currently has no subscribers - safe no-op.
+    """
+    pass
+
+
+@app.websocket("/ws/agent/{agent_id}")
+async def websocket_agent_presence(websocket: WebSocket, agent_id: int):
+    db = SessionLocal()
+    try:
+        agent = db.query(Agent).filter(Agent.id == agent_id).first()
+        if not agent:
+            await websocket.close(code=4004)
+            return
+
+        await websocket.accept()
+        agent_presence_connections[agent_id] = websocket
+
+        agent.status = "online"
+        db.commit()
+        await _broadcast_presence(agent_id, "online")
+
+        try:
+            while True:
+                # Agents can optionally send {"status": "busy"} or
+                # {"status": "online"} to manually update their own state
+                # (e.g. dashboard toggle), separate from chat activity.
+                data = await websocket.receive_json()
+                new_status = data.get("status")
+                if new_status in ("online", "busy"):
+                    agent.status = new_status
+                    db.commit()
+                    await _broadcast_presence(agent_id, new_status)
+        except WebSocketDisconnect:
+            pass
+    finally:
+        if agent_presence_connections.get(agent_id) is websocket:
+            del agent_presence_connections[agent_id]
+        agent.status = "offline"
+        db.commit()
+        db.close()
+
+
+# -----------------------------------------
 # Escalation helpers
 # -----------------------------------------
 
