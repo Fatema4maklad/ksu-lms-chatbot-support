@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Optional
 
 import bcrypt
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
@@ -56,6 +56,109 @@ MAX_HISTORY_MESSAGES = 12
 @app.get("/api/test")
 def test_endpoint():
     return {"message": "Backend is online and running!"}
+
+
+# -----------------------------------------
+# Live agent handoff (WebSocket)
+# -----------------------------------------
+
+class ConnectionManager:
+    """
+    Tracks active WebSocket connections per conversation. Both the user's
+    browser tab and an agent's dashboard tab connect to the same
+    conversation_id "room" and receive each other's messages live.
+    """
+    def __init__(self):
+        self.active_connections: dict[str, list[WebSocket]] = {}
+
+    async def connect(self, conversation_id: str, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.setdefault(conversation_id, []).append(websocket)
+
+    def disconnect(self, conversation_id: str, websocket: WebSocket):
+        if conversation_id in self.active_connections:
+            self.active_connections[conversation_id].remove(websocket)
+            if not self.active_connections[conversation_id]:
+                del self.active_connections[conversation_id]
+
+    async def broadcast(self, conversation_id: str, payload: dict):
+        for connection in self.active_connections.get(conversation_id, []):
+            await connection.send_json(payload)
+
+
+manager = ConnectionManager()
+
+
+def _serialize_message(m: Message) -> dict:
+    return {
+        "id": m.id,
+        "role": m.role,
+        "agent_id": m.agent_id,
+        "content": m.content,
+        "created_at": m.created_at.isoformat(),
+    }
+
+
+@app.websocket("/ws/chat/{conversation_id}")
+async def websocket_chat(websocket: WebSocket, conversation_id: str):
+    db = SessionLocal()
+    try:
+        print(f"[WS DEBUG] Looking for conversation_id={conversation_id!r}")
+        all_uuids = [c.conversation_uuid for c in db.query(Conversation).all()]
+        print(f"[WS DEBUG] UUIDs currently in DB: {all_uuids}")
+
+        conversation = db.query(Conversation).filter(
+            Conversation.conversation_uuid == conversation_id
+        ).first()
+        print(f"[WS DEBUG] Query result: {conversation}")
+
+        if not conversation:
+            await websocket.close(code=4004)
+            return
+
+        await manager.connect(conversation_id, websocket)
+
+        # Push full history immediately on connect, so a user reconnecting
+        # or an agent claiming the chat sees everything that came before.
+        history_rows = (
+            db.query(Message)
+            .filter(Message.conversation_id == conversation.id)
+            .order_by(Message.id.asc())
+            .all()
+        )
+        await websocket.send_json({
+            "type": "history",
+            "messages": [_serialize_message(m) for m in history_rows],
+        })
+
+        try:
+            while True:
+                data = await websocket.receive_json()
+                role = data.get("role")
+                content = (data.get("content") or "").strip()
+                agent_id = data.get("agent_id")
+
+                if role not in ("user", "agent") or not content:
+                    continue
+
+                new_message = Message(
+                    conversation_id=conversation.id,
+                    role=role,
+                    agent_id=agent_id if role == "agent" else None,
+                    content=content,
+                )
+                db.add(new_message)
+                db.commit()
+                db.refresh(new_message)
+
+                await manager.broadcast(conversation_id, {
+                    "type": "message",
+                    "message": _serialize_message(new_message),
+                })
+        except WebSocketDisconnect:
+            manager.disconnect(conversation_id, websocket)
+    finally:
+        db.close()
 
 
 @app.post("/api/chat", response_model=ChatResponse)

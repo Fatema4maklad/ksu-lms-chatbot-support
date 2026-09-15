@@ -61,15 +61,17 @@ class Conversation(Base):
 
 class Message(Base):
     """
-    Every user and assistant turn in a conversation. Kept in insertion order
-    via id, which is also used to reconstruct history for the LLM prompt.
+    Every user, assistant, and agent turn in a conversation. Kept in
+    insertion order via id, which is also used to reconstruct history for
+    the LLM prompt and for the live agent handoff / beneficiary profile view.
     """
     __tablename__ = "messages"
     __table_args__ = {'extend_existing': True}
 
     id = Column(Integer, primary_key=True, index=True)
     conversation_id = Column(Integer, ForeignKey("conversations.id"), index=True)
-    role = Column(String)  # "user" | "assistant"
+    role = Column(String)  # "user" | "assistant" | "agent"
+    agent_id = Column(Integer, ForeignKey("agents.id"), nullable=True)  # set only when role == "agent"
     content = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
 
