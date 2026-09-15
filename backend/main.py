@@ -52,6 +52,18 @@ app.include_router(auth.router)
 # and feed into the LLM prompt as context.
 MAX_HISTORY_MESSAGES = 12
 
+# The exact text the frontend sends when a user clicks "أخرى (اكتب مشكلتك)".
+ESCALATION_TRIGGER_TEXT = "مشكلة أخرى"
+
+# Consecutive 👎 on assistant replies (within one conversation) needed to
+# auto-escalate to a human agent.
+CONSECUTIVE_DOWNVOTES_TO_ESCALATE = 2
+
+ESCALATION_REPLY = (
+    "تم تحويلك إلى أحد موظفي الدعم الفني، يرجى الانتظار قليلاً حتى ينضم أحدهم للمحادثة.\n\n"
+    "You've been connected to a human support agent. Please wait a moment while someone joins the chat."
+)
+
 
 @app.get("/api/test")
 def test_endpoint():
@@ -103,14 +115,9 @@ def _serialize_message(m: Message) -> dict:
 async def websocket_chat(websocket: WebSocket, conversation_id: str):
     db = SessionLocal()
     try:
-        print(f"[WS DEBUG] Looking for conversation_id={conversation_id!r}")
-        all_uuids = [c.conversation_uuid for c in db.query(Conversation).all()]
-        print(f"[WS DEBUG] UUIDs currently in DB: {all_uuids}")
-
         conversation = db.query(Conversation).filter(
             Conversation.conversation_uuid == conversation_id
         ).first()
-        print(f"[WS DEBUG] Query result: {conversation}")
 
         if not conversation:
             await websocket.close(code=4004)
@@ -161,6 +168,55 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
         db.close()
 
 
+# -----------------------------------------
+# Escalation helpers
+# -----------------------------------------
+
+def _escalate_conversation(db: Session, conversation: Conversation):
+    """Flips a conversation to escalated status, if not already."""
+    if conversation.status != "escalated":
+        conversation.status = "escalated"
+        db.commit()
+
+
+async def _notify_escalation(conversation_uuid: str, conversation: Conversation, db: Session):
+    """
+    Pushes a system message over the WebSocket (if anyone's connected to
+    this conversation's room) announcing the handoff. This is also how an
+    agent dashboard listening on this room would get notified a user is
+    waiting - the "notification logic" from the weekly plan.
+    """
+    await manager.broadcast(conversation_uuid, {
+        "type": "escalation",
+        "conversation_id": conversation_uuid,
+        "status": "escalated",
+    })
+
+
+def _check_consecutive_downvotes(db: Session, conversation_id: int) -> bool:
+    """
+    Returns True if the last CONSECUTIVE_DOWNVOTES_TO_ESCALATE assistant
+    messages in this conversation were all rated 'down'.
+    """
+    recent_assistant_msgs = (
+        db.query(Message)
+        .filter(Message.conversation_id == conversation_id, Message.role == "assistant")
+        .order_by(Message.id.desc())
+        .limit(CONSECUTIVE_DOWNVOTES_TO_ESCALATE)
+        .all()
+    )
+
+    if len(recent_assistant_msgs) < CONSECUTIVE_DOWNVOTES_TO_ESCALATE:
+        return False
+
+    for msg in recent_assistant_msgs:
+        fb = db.query(Feedback).filter(Feedback.message_id == msg.id).first()
+        if not fb or fb.rating != "down":
+            return False
+
+    return True
+
+
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_endpoint(
     request: ChatRequest,
@@ -186,7 +242,43 @@ def chat_endpoint(
         db.commit()
         db.refresh(conversation)
 
-    # Pull recent prior turns (oldest first) to give the LLM conversational memory.
+    # Always persist the user's message first, regardless of AI/escalated path.
+    user_message = Message(
+        conversation_id=conversation.id,
+        role="user",
+        content=request.question,
+    )
+    db.add(user_message)
+    db.commit()
+
+    # Trigger 1: user explicitly asked for "أخرى (اكتب مشكلتك)" -> escalate now.
+    just_escalated = False
+    if request.question.strip() == ESCALATION_TRIGGER_TEXT and conversation.status != "escalated":
+        _escalate_conversation(db, conversation)
+        just_escalated = True
+
+    # If this conversation is (now, or already) escalated, a human should be
+    # answering - skip the AI entirely and just acknowledge/save.
+    if conversation.status == "escalated":
+        reply = ESCALATION_REPLY if just_escalated else (
+            "طلبك قيد المراجعة من قبل فريق الدعم. / Your request is being handled by our support team."
+        )
+        assistant_message = Message(
+            conversation_id=conversation.id,
+            role="assistant",
+            content=reply,
+        )
+        db.add(assistant_message)
+        db.commit()
+        db.refresh(assistant_message)
+
+        return ChatResponse(
+            answer=reply,
+            conversation_id=conversation.conversation_uuid,
+            message_id=assistant_message.id,
+        )
+
+    # Normal AI path (not escalated).
     history_rows = (
         db.query(Message)
         .filter(Message.conversation_id == conversation.id)
@@ -196,16 +288,6 @@ def chat_endpoint(
     )
     history_rows.reverse()
     history = [{"role": m.role, "content": m.content} for m in history_rows]
-
-    # Persist the user's message before calling the model, so it survives
-    # even if generation fails partway through.
-    user_message = Message(
-        conversation_id=conversation.id,
-        role="user",
-        content=request.question,
-    )
-    db.add(user_message)
-    db.commit()
 
     try:
         reply = ask_lms_assistant(request.question, history=history)
@@ -245,5 +327,14 @@ def feedback_endpoint(request: FeedbackRequest, db: Session = Depends(get_db)):
         db.add(existing)
 
     db.commit()
+
+    # Trigger 2: 2+ consecutive 👎 on assistant replies -> escalate.
+    if request.rating == "down":
+        conversation = db.query(Conversation).filter(
+            Conversation.id == message.conversation_id
+        ).first()
+        if conversation and conversation.status != "escalated":
+            if _check_consecutive_downvotes(db, conversation.id):
+                _escalate_conversation(db, conversation)
 
     return FeedbackResponse(message_id=request.message_id, rating=request.rating)
