@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import './App.css';
 
@@ -67,6 +67,22 @@ const categoryTree = {
 };
 
 const API_BASE = 'http://localhost:8000';
+// Same host as API_BASE, just over the WebSocket protocol instead of HTTP.
+const WS_BASE = API_BASE.replace(/^http/, 'ws');
+
+// Converts a backend message ({id, role, agent_id, content, created_at}) into
+// the shape the UI already knows how to render ({id, role, content, senderType}).
+// Backend "agent" role maps to senderType "human" so the existing 🎧 icon logic
+// (already in the JSX below) picks it up with no further changes.
+const mapBackendMessage = (m) => {
+  if (m.role === 'user') {
+    return { id: m.id, role: 'user', content: m.content, senderType: 'user' };
+  }
+  if (m.role === 'agent') {
+    return { id: m.id, role: 'bot', content: m.content, senderType: 'human', feedback: null };
+  }
+  return { id: m.id, role: 'bot', content: m.content, senderType: 'ai', feedback: null };
+};
 
 function ChatApp() {
   const [messages, setMessages] = useState([
@@ -86,6 +102,56 @@ function ChatApp() {
   // server-side, so the assistant can recall earlier turns. It starts null
   // (brand-new conversation) and gets set from the first API response.
   const [conversationId, setConversationId] = useState(null);
+  // "ai" | "escalated" — mirrors Conversation.status from the backend. Once
+  // escalated, the chat switches from HTTP POST to a live WebSocket.
+  const [conversationStatus, setConversationStatus] = useState('ai');
+
+  // Holds the live WebSocket connection once escalated. A ref (not state)
+  // because we need to read/send on it from inside callbacks without
+  // triggering re-renders or dealing with stale closures.
+  const wsRef = useRef(null);
+
+  // Open the WebSocket the moment this conversation becomes escalated, and
+  // keep it open for the rest of the session. Closes cleanly on unmount.
+  useEffect(() => {
+    if (conversationStatus !== 'escalated' || !conversationId) return;
+    if (wsRef.current) return; // already connected
+
+    const ws = new WebSocket(`${WS_BASE}/ws/chat/${conversationId}`);
+    wsRef.current = ws;
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'history') {
+        // Full history push on connect. Keep the static greeting bubble
+        // (it has no id, never lived server-side) and replace everything
+        // else with what the server actually has, so we're in sync even
+        // after a reconnect.
+        setMessages((prev) => {
+          const greeting = prev.find((m) => !m.id && m.senderType === 'ai');
+          const historyMessages = data.messages.map(mapBackendMessage);
+          return greeting ? [greeting, ...historyMessages] : historyMessages;
+        });
+      } else if (data.type === 'message') {
+        setMessages((prev) => {
+          // Avoid duplicating a message we might already have (e.g. our
+          // own message echoed back through the broadcast).
+          if (prev.some((m) => m.id === data.message.id)) return prev;
+          return [...prev, mapBackendMessage(data.message)];
+        });
+      }
+    };
+
+    ws.onclose = () => {
+      wsRef.current = null;
+    };
+
+    return () => {
+      ws.close();
+      wsRef.current = null;
+    };
+  }, [conversationStatus, conversationId]);
 
   const handleOptionClick = (option) => {
     // If the option exists as a key in the tree, show its children
@@ -130,6 +196,15 @@ function ChatApp() {
   const sendUserText = async (text) => {
     if (!text.trim()) return;
 
+    // Once escalated and the live socket is open, send over the WebSocket
+    // instead of HTTP. The server broadcasts the message back to everyone
+    // in the room (including us), which is what actually adds it to the
+    // UI — see the ws.onmessage handler above.
+    if (conversationStatus === 'escalated' && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ role: 'user', content: text }));
+      return;
+    }
+
     const userMessage = { role: 'user', content: text, senderType: 'user' };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
@@ -151,6 +226,7 @@ function ChatApp() {
 
       const data = await response.json();
       setConversationId(data.conversation_id);
+      setConversationStatus(data.status || 'ai');
       setMessages((prev) => [
         ...prev,
         {
@@ -181,7 +257,13 @@ function ChatApp() {
       <header>
         <h2>KSU Blackboard Assistant</h2>
       </header>
-      
+
+      {conversationStatus === 'escalated' && (
+        <div className="escalation-banner" dir="auto">
+          🎧 تم تحويلك إلى فريق الدعم الفني، بانتظار الرد / Connected to a human agent — waiting for a reply
+        </div>
+      )}
+
       <div className="messages-area">
         {messages.map((msg, index) => (
           <div key={index} className={`message-wrapper ${msg.role}`}>
@@ -223,26 +305,28 @@ function ChatApp() {
         )}
       </div>
 
-      <div className="options-container" dir="rtl">
-        {currentOptions.length > 0 ? (
-          <>
-            {currentOptions !== categoryTree["الرئيسية"] && (
-              <button type="button" className="option-chip back-btn" onClick={resetMenu}>
-                ↩ القائمة الرئيسية
-              </button>
-            )}
-            {currentOptions.map((opt, i) => (
-              <button key={i} type="button" className="option-chip" onClick={() => handleOptionClick(opt)}>
-                {opt}
-              </button>
-            ))}
-          </>
-        ) : (
-          <button type="button" className="option-chip restart-btn" onClick={resetMenu}>
-            🏠 العودة للقائمة الرئيسية
-          </button>
-        )}
-      </div>
+      {conversationStatus !== 'escalated' && (
+        <div className="options-container" dir="rtl">
+          {currentOptions.length > 0 ? (
+            <>
+              {currentOptions !== categoryTree["الرئيسية"] && (
+                <button type="button" className="option-chip back-btn" onClick={resetMenu}>
+                  ↩ القائمة الرئيسية
+                </button>
+              )}
+              {currentOptions.map((opt, i) => (
+                <button key={i} type="button" className="option-chip" onClick={() => handleOptionClick(opt)}>
+                  {opt}
+                </button>
+              ))}
+            </>
+          ) : (
+            <button type="button" className="option-chip restart-btn" onClick={resetMenu}>
+              🏠 العودة للقائمة الرئيسية
+            </button>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="input-area">
         <input
