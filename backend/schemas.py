@@ -34,6 +34,7 @@ class ChatResponse(BaseModel):
     answer: str
     conversation_id: str
     message_id: int  # id of the assistant's message; needed to submit feedback on it
+    status: str = "ai"  # "ai" | "escalated" — tells the frontend whether to switch to the WebSocket
 
 class FeedbackRequest(BaseModel):
     message_id: int

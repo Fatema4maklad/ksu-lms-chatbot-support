@@ -331,6 +331,7 @@ def chat_endpoint(
             answer=reply,
             conversation_id=conversation.conversation_uuid,
             message_id=assistant_message.id,
+            status=conversation.status,
         )
 
     # Normal AI path (not escalated).
@@ -362,6 +363,7 @@ def chat_endpoint(
         answer=reply,
         conversation_id=conversation.conversation_uuid,
         message_id=assistant_message.id,
+        status=conversation.status,
     )
 
 
