@@ -181,3 +181,29 @@
   color: #94a3b8;
   font-size: 1rem;
 }
+
+.dashboard-chat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dashboard-resolve-btn {
+  background: #16a34a;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dashboard-resolve-btn:hover:not(:disabled) {
+  background: #15803d;
+}
+
+.dashboard-resolve-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

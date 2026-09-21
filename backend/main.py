@@ -8,6 +8,7 @@ import bcrypt
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
 
 from rag_service import ask_lms_assistant
 from routers import auth
@@ -128,6 +129,7 @@ def _serialize_conversation_summary(c: Conversation, db: Session) -> dict:
     return {
         "conversation_id": c.conversation_uuid,
         "status": c.status,
+        "ticket_status": c.ticket_status,
         "created_at": c.created_at.isoformat(),
         "user_id": c.user_id,
         "last_message": last_message.content if last_message else None,
@@ -334,16 +336,43 @@ def _check_consecutive_downvotes(db: Session, conversation_id: int) -> bool:
 @app.get("/agent/queue")
 def get_agent_queue(db: Session = Depends(get_db), agent_id: int = Depends(get_current_agent)):
     """
-    Returns every escalated conversation, newest first. Requires a valid
-    agent session token - see dependencies.get_current_agent.
+    Returns every escalated conversation that hasn't been resolved yet,
+    newest first. Requires a valid agent session token - see
+    dependencies.get_current_agent.
     """
     conversations = (
         db.query(Conversation)
-        .filter(Conversation.status == "escalated")
+        .filter(Conversation.status == "escalated", Conversation.ticket_status != "resolved")
         .order_by(Conversation.created_at.desc())
         .all()
     )
     return [_serialize_conversation_summary(c, db) for c in conversations]
+
+
+class TicketStatusUpdate(BaseModel):
+    ticket_status: str  # "open" | "in_progress" | "resolved"
+
+
+@app.patch("/agent/conversation/{conversation_id}/status")
+def update_ticket_status(
+    conversation_id: str,
+    payload: TicketStatusUpdate,
+    db: Session = Depends(get_db),
+    agent_id: int = Depends(get_current_agent),
+):
+    if payload.ticket_status not in ("open", "in_progress", "resolved"):
+        raise HTTPException(status_code=400, detail="Invalid ticket_status value")
+
+    conversation = db.query(Conversation).filter(
+        Conversation.conversation_uuid == conversation_id
+    ).first()
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    conversation.ticket_status = payload.ticket_status
+    db.commit()
+
+    return {"conversation_id": conversation_id, "ticket_status": conversation.ticket_status}
 
 
 @app.post("/api/chat", response_model=ChatResponse)

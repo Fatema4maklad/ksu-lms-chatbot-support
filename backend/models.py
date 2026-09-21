@@ -57,6 +57,7 @@ class Conversation(Base):
     conversation_uuid = Column(String, unique=True, index=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # nullable: chat can start before/without login
     status = Column(String, default="ai")  # "ai" | "escalated" | "closed" (escalated/closed reserved for the handoff feature)
+    ticket_status = Column(String, default="open")  # "open" | "in_progress" | "resolved" — support-ticket lifecycle, separate from status (which drives AI vs human routing)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 

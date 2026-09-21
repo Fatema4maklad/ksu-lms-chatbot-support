@@ -23,6 +23,7 @@ function AgentDashboard() {
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
+  const [resolving, setResolving] = useState(false);
 
   const presenceWsRef = useRef(null);
   const queueWsRef = useRef(null);
@@ -125,6 +126,34 @@ function AgentDashboard() {
     setInput('');
   };
 
+  const handleResolve = async () => {
+    if (!selectedConversationId) return;
+    setResolving(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}/agent/conversation/${selectedConversationId}/status`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken,
+          },
+          body: JSON.stringify({ ticket_status: 'resolved' }),
+        }
+      );
+      if (!res.ok) throw new Error('Failed to resolve conversation');
+
+      // Remove it from the local queue and close the open chat panel.
+      setQueue((prev) => prev.filter((c) => c.conversation_id !== selectedConversationId));
+      setSelectedConversationId(null);
+      setMessages([]);
+    } catch (err) {
+      console.error('Resolve failed:', err);
+    } finally {
+      setResolving(false);
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('agent_session');
     localStorage.removeItem('agent_name');
@@ -138,7 +167,14 @@ function AgentDashboard() {
         {selectedConversationId ? (
           <>
             <div className="dashboard-chat-header">
-              محادثة: {selectedConversationId.slice(0, 8)}
+              <span>محادثة: {selectedConversationId.slice(0, 8)}</span>
+              <button
+                className="dashboard-resolve-btn"
+                onClick={handleResolve}
+                disabled={resolving}
+              >
+                {resolving ? '...' : '✓ إنهاء المحادثة'}
+              </button>
             </div>
             <div className="dashboard-messages-area">
               {messages.map((msg) => (
