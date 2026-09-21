@@ -15,7 +15,7 @@ from routers import auth
 from database import engine, Base, SessionLocal, get_db
 from models import Agent, Conversation, Message, Feedback
 from schemas import ChatRequest, ChatResponse, FeedbackRequest, FeedbackResponse
-from dependencies import get_optional_current_user
+from dependencies import get_optional_current_user, get_current_agent
 
 Base.metadata.create_all(bind=engine)
 
@@ -101,6 +101,13 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+# Tracks agent dashboard sockets subscribed to queue updates (distinct from
+# both the per-conversation chat sockets above and the per-agent presence
+# sockets below). Any agent dashboard connected here gets a live push the
+# moment a new conversation escalates, via _notify_escalation.
+queue_subscribers: list[WebSocket] = []
+
+
 def _serialize_message(m: Message) -> dict:
     return {
         "id": m.id,
@@ -108,6 +115,22 @@ def _serialize_message(m: Message) -> dict:
         "agent_id": m.agent_id,
         "content": m.content,
         "created_at": m.created_at.isoformat(),
+    }
+
+
+def _serialize_conversation_summary(c: Conversation, db: Session) -> dict:
+    last_message = (
+        db.query(Message)
+        .filter(Message.conversation_id == c.id)
+        .order_by(Message.id.desc())
+        .first()
+    )
+    return {
+        "conversation_id": c.conversation_uuid,
+        "status": c.status,
+        "created_at": c.created_at.isoformat(),
+        "user_id": c.user_id,
+        "last_message": last_message.content if last_message else None,
     }
 
 
@@ -166,6 +189,29 @@ async def websocket_chat(websocket: WebSocket, conversation_id: str):
             manager.disconnect(conversation_id, websocket)
     finally:
         db.close()
+
+
+@app.websocket("/ws/agent/queue")
+async def websocket_agent_queue(websocket: WebSocket):
+    """
+    Agent dashboards connect here to receive a live push whenever a new
+    conversation escalates, via _notify_escalation. No history is sent on
+    connect - the dashboard fetches the current queue via GET /agent/queue
+    on load, and this socket only carries live "a new one just arrived"
+    events from then on.
+    """
+    await websocket.accept()
+    queue_subscribers.append(websocket)
+    try:
+        while True:
+            # This socket is push-only from the server's side; we still need
+            # to await receive to detect disconnects.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        if websocket in queue_subscribers:
+            queue_subscribers.remove(websocket)
 
 
 # -----------------------------------------
@@ -234,18 +280,27 @@ def _escalate_conversation(db: Session, conversation: Conversation):
         db.commit()
 
 
-async def _notify_escalation(conversation_uuid: str, conversation: Conversation, db: Session):
+async def _notify_escalation(conversation: Conversation, db: Session):
     """
-    Pushes a system message over the WebSocket (if anyone's connected to
-    this conversation's room) announcing the handoff. This is also how an
-    agent dashboard listening on this room would get notified a user is
-    waiting - the "notification logic" from the weekly plan.
+    Pushes two live notifications when a conversation escalates:
+    1. Into the conversation's own WebSocket room (so an agent already
+       viewing that chat sees the status change).
+    2. To every agent dashboard subscribed to /ws/agent/queue (so agents
+       browsing the queue see the new entry appear without refreshing).
     """
-    await manager.broadcast(conversation_uuid, {
+    summary = _serialize_conversation_summary(conversation, db)
+
+    await manager.broadcast(conversation.conversation_uuid, {
         "type": "escalation",
-        "conversation_id": conversation_uuid,
+        "conversation_id": conversation.conversation_uuid,
         "status": "escalated",
     })
+
+    for ws in list(queue_subscribers):
+        try:
+            await ws.send_json({"type": "new_escalation", "conversation": summary})
+        except Exception:
+            pass
 
 
 def _check_consecutive_downvotes(db: Session, conversation_id: int) -> bool:
@@ -272,8 +327,27 @@ def _check_consecutive_downvotes(db: Session, conversation_id: int) -> bool:
     return True
 
 
+# -----------------------------------------
+# Agent queue (Phase 3)
+# -----------------------------------------
+
+@app.get("/agent/queue")
+def get_agent_queue(db: Session = Depends(get_db), agent_id: int = Depends(get_current_agent)):
+    """
+    Returns every escalated conversation, newest first. Requires a valid
+    agent session token - see dependencies.get_current_agent.
+    """
+    conversations = (
+        db.query(Conversation)
+        .filter(Conversation.status == "escalated")
+        .order_by(Conversation.created_at.desc())
+        .all()
+    )
+    return [_serialize_conversation_summary(c, db) for c in conversations]
+
+
 @app.post("/api/chat", response_model=ChatResponse)
-def chat_endpoint(
+async def chat_endpoint(
     request: ChatRequest,
     db: Session = Depends(get_db),
     user_id: Optional[int] = Depends(get_optional_current_user),
@@ -311,6 +385,9 @@ def chat_endpoint(
     if request.question.strip() == ESCALATION_TRIGGER_TEXT and conversation.status != "escalated":
         _escalate_conversation(db, conversation)
         just_escalated = True
+
+    if just_escalated:
+        await _notify_escalation(conversation, db)
 
     # If this conversation is (now, or already) escalated, a human should be
     # answering - skip the AI entirely and just acknowledge/save.
@@ -368,7 +445,7 @@ def chat_endpoint(
 
 
 @app.post("/api/feedback", response_model=FeedbackResponse)
-def feedback_endpoint(request: FeedbackRequest, db: Session = Depends(get_db)):
+async def feedback_endpoint(request: FeedbackRequest, db: Session = Depends(get_db)):
     if request.rating not in ("up", "down"):
         raise HTTPException(status_code=400, detail="rating must be 'up' or 'down'")
 
@@ -393,5 +470,6 @@ def feedback_endpoint(request: FeedbackRequest, db: Session = Depends(get_db)):
         if conversation and conversation.status != "escalated":
             if _check_consecutive_downvotes(db, conversation.id):
                 _escalate_conversation(db, conversation)
+                await _notify_escalation(conversation, db)
 
     return FeedbackResponse(message_id=request.message_id, rating=request.rating)
