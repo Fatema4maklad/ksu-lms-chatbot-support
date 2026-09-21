@@ -23,6 +23,7 @@ function AgentLogin() {
       const data = await response.json();
       localStorage.setItem('agent_session', data.session_token);
       localStorage.setItem('agent_name', data.name);
+      localStorage.setItem('agent_id', data.agent_id);
       
       // Redirect to the support dashboard
       navigate('/agent/dashboard');
