@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
 from rag_service import ask_lms_assistant, generate_faq_summary
-from routers import auth
+from routers import auth, admin
 
 from database import engine, Base, SessionLocal, get_db
 from models import Agent, Conversation, Message, Feedback, User
@@ -49,6 +49,7 @@ app.add_middleware(
 
 # Register auth router (Removed agent_auth, removed prefix to match React)
 app.include_router(auth.router)
+app.include_router(admin.router)
 
 # How many prior messages (both roles combined) to pull back out of the DB
 # and feed into the LLM prompt as context.
