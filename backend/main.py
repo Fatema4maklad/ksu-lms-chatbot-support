@@ -14,7 +14,7 @@ from rag_service import ask_lms_assistant
 from routers import auth
 
 from database import engine, Base, SessionLocal, get_db
-from models import Agent, Conversation, Message, Feedback
+from models import Agent, Conversation, Message, Feedback, User
 from schemas import ChatRequest, ChatResponse, FeedbackRequest, FeedbackResponse
 from dependencies import get_optional_current_user, get_current_agent
 
@@ -126,12 +126,17 @@ def _serialize_conversation_summary(c: Conversation, db: Session) -> dict:
         .order_by(Message.id.desc())
         .first()
     )
+    # Anonymous conversations (no logged-in student) have no user_id, so
+    # there's no name or university ID to attach.
+    user = db.query(User).filter(User.id == c.user_id).first() if c.user_id else None
     return {
         "conversation_id": c.conversation_uuid,
         "status": c.status,
         "ticket_status": c.ticket_status,
         "created_at": c.created_at.isoformat(),
         "user_id": c.user_id,
+        "university_id": user.university_id if user else None,
+        "user_name": user.name if user else None,
         "last_message": last_message.content if last_message else None,
     }
 
@@ -373,6 +378,52 @@ def update_ticket_status(
     db.commit()
 
     return {"conversation_id": conversation_id, "ticket_status": conversation.ticket_status}
+
+
+@app.get("/agent/beneficiary/{university_id}")
+def get_beneficiary_profile(
+    university_id: str,
+    db: Session = Depends(get_db),
+    agent_id: int = Depends(get_current_agent),
+):
+    """
+    Returns a student's name and their full conversation history across
+    sessions (newest conversation first, messages oldest first within each).
+    Only conversations linked to a logged-in student appear here; anonymous
+    chats have no user_id and can't be attributed to anyone.
+    """
+    user = db.query(User).filter(User.university_id == university_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Beneficiary not found")
+
+    conversations = (
+        db.query(Conversation)
+        .filter(Conversation.user_id == user.id)
+        .order_by(Conversation.created_at.desc())
+        .all()
+    )
+
+    history = []
+    for c in conversations:
+        messages = (
+            db.query(Message)
+            .filter(Message.conversation_id == c.id)
+            .order_by(Message.id.asc())
+            .all()
+        )
+        history.append({
+            "conversation_id": c.conversation_uuid,
+            "status": c.status,
+            "ticket_status": c.ticket_status,
+            "created_at": c.created_at.isoformat(),
+            "messages": [_serialize_message(m) for m in messages],
+        })
+
+    return {
+        "university_id": user.university_id,
+        "name": user.name,
+        "conversations": history,
+    }
 
 
 @app.post("/api/chat", response_model=ChatResponse)
