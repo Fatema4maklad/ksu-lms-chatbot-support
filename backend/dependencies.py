@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import UserSession, AgentSession
 
+
 def get_current_user(x_session_token: str = Header(...), db: Session = Depends(get_db)):
     session = db.query(UserSession).filter(
         UserSession.token == x_session_token,
