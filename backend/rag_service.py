@@ -150,3 +150,61 @@ You are highly professional and MUST follow these rules exactly:
         return "عذراً، النظام يأخذ وقتاً طويلاً للرد. يرجى المحاولة مرة أخرى."
     except requests.exceptions.ConnectionError:
         return "عذراً، لا يمكن الاتصال بمزود الذكاء الاصطناعي المحلي. يرجى التأكد من تشغيل الخادم."
+
+
+def generate_faq_summary(questions: list):
+    """
+    Reads a batch of real student questions and asks the local model to
+    identify the most common recurring themes, producing a short bilingual
+    FAQ list. This is the "AI-generated FAQ surfacing" analytics feature -
+    triggered on demand from the dashboard rather than run on a schedule.
+    """
+    if not questions:
+        return "لا توجد بيانات كافية حتى الآن. / Not enough data yet."
+
+    # Cap the sample so the prompt (and inference time) stays reasonable on
+    # CPU-only hardware.
+    sample = questions[:60]
+    questions_block = "\n".join(f"- {q}" for q in sample)
+
+    prompt = f"""You are analyzing real student support questions submitted to the KSU Blackboard Support Assistant.
+
+<rules>
+1. Read the <questions> list below.
+2. Identify the 5 to 8 most common recurring THEMES (not individual questions) - group similar questions together.
+3. For each theme, write ONE representative FAQ question and a short, helpful answer.
+4. Output in BOTH Arabic and English for each item, Arabic first.
+5. NO Chinese characters or any language other than Arabic and English.
+6. Format as a numbered list. Keep each answer to 1-3 sentences.
+</rules>
+
+<questions>
+{questions_block}
+</questions>
+
+Produce the FAQ list now.
+"""
+
+    payload = {
+        "model": OLLAMA_LLM_MODEL,
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.3
+        }
+    }
+
+    try:
+        # Reading many questions at once takes longer than a single chat
+        # reply, so this gets a longer ceiling than ask_lms_assistant.
+        res = requests.post(f"{OLLAMA_BASE}/generate", json=payload, timeout=240)
+
+        if res.status_code == 200:
+            return strip_chinese(res.json()["response"])
+
+        return f"Error: {res.text}"
+
+    except requests.exceptions.Timeout:
+        return "تعذر إنشاء الأسئلة الشائعة في الوقت المحدد، يرجى المحاولة لاحقاً.\n\nCould not generate the FAQ in time, please try again later."
+    except requests.exceptions.ConnectionError:
+        return "عذراً، لا يمكن الاتصال بمزود الذكاء الاصطناعي المحلي. يرجى التأكد من تشغيل الخادم."

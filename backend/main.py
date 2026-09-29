@@ -1,8 +1,9 @@
 import sys
 import uuid
 from pathlib import Path
-from datetime import datetime
-from typing import Optional
+from datetime import datetime, timedelta
+from typing import Optional, List
+from collections import Counter
 
 import bcrypt
 from fastapi import FastAPI, HTTPException, Depends, WebSocket, WebSocketDisconnect
@@ -10,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 
-from rag_service import ask_lms_assistant
+from rag_service import ask_lms_assistant, generate_faq_summary
 from routers import auth
 
 from database import engine, Base, SessionLocal, get_db
@@ -424,6 +425,130 @@ def get_beneficiary_profile(
         "name": user.name,
         "conversations": history,
     }
+
+
+# -----------------------------------------
+# Analytics (Phase 3)
+# -----------------------------------------
+
+# Mirrors the leaf questions in the frontend's categoryTree (ChatApp.jsx),
+# mapped back to their top-level category. Used only for analytics grouping -
+# if this drifts from the frontend tree, category counts just undercount
+# rather than break anything.
+LEAF_TO_CATEGORY = {
+    "كيف أسجل دخولي للنظام؟": "الدخول والحسابات",
+    "ما هو الرابط الصحيح لنظام البلاك بورد؟": "الدخول والحسابات",
+    "نسيت كلمة السر": "الدخول والحسابات",
+    "كلمة السر صحيحة ولكن النظام لا يعمل": "الدخول والحسابات",
+    "كيف أغير كلمة المرور؟": "الدخول والحسابات",
+    "كيف أقوم بتحديث بياناتي الشخصية؟": "الدخول والحسابات",
+    "حسابي مقفل أو غير مفعل": "الدخول والحسابات",
+    "أين أجد مقرراتي الدراسية؟": "الشؤون الأكاديمية",
+    "محتوى المقرر أو المحاضرات لا تفتح": "الشؤون الأكاديمية",
+    "كيف أتواصل مع أستاذ المقرر؟": "الشؤون الأكاديمية",
+    "أضفت مقرر في البوابة ولم يظهر في البلاك بورد": "الشؤون الأكاديمية",
+    "حذفت مقرر وما زال يظهر لي": "الشؤون الأكاديمية",
+    "متى تتحدث المقررات في النظام؟": "الشؤون الأكاديمية",
+    "أين أجد درجاتي للواجبات والاختبارات؟": "الشؤون الأكاديمية",
+    "الدرجة غير ظاهرة لي": "الشؤون الأكاديمية",
+    "كيف أعرف تفاصيل الدرجة والملاحظات؟": "الشؤون الأكاديمية",
+    "يظهر لي (Access Denied)": "مشكلة تقنية عامة",
+    "النظام معلق أو الصفحة لا تفتح": "مشكلة تقنية عامة",
+    "لا أستطيع رفع الواجب أو الاختبار": "مشكلة تقنية عامة",
+    "الملف المرفق حجمه كبير جداً": "مشكلة تقنية عامة",
+    "لا أستطيع تحميل ملفات المقرر": "مشكلة تقنية عامة",
+    ESCALATION_TRIGGER_TEXT: "مشكلة تقنية عامة",  # "مشكلة أخرى"
+}
+
+
+@app.get("/agent/analytics")
+def get_analytics(db: Session = Depends(get_db), agent_id: int = Depends(get_current_agent)):
+    """
+    Dashboard stats: ticket counts by status, top categories (matched from
+    each conversation's first user message), feedback totals, and a 7-day
+    conversation-volume trend. Requires a valid agent session token.
+    """
+    all_conversations = db.query(Conversation).all()
+
+    resolved_count = sum(1 for c in all_conversations if c.ticket_status == "resolved")
+    active_count = sum(1 for c in all_conversations if c.ticket_status == "in_progress")
+    unresolved_count = sum(
+        1 for c in all_conversations
+        if c.status == "escalated" and c.ticket_status == "open"
+    )
+
+    category_counter = Counter()
+    for c in all_conversations:
+        first_user_msg = (
+            db.query(Message)
+            .filter(Message.conversation_id == c.id, Message.role == "user")
+            .order_by(Message.id.asc())
+            .first()
+        )
+        if first_user_msg:
+            category = LEAF_TO_CATEGORY.get(first_user_msg.content.strip())
+            if category:
+                category_counter[category] += 1
+
+    top_categories = [
+        {"category": cat, "count": count}
+        for cat, count in category_counter.most_common(5)
+    ]
+
+    up_count = db.query(Feedback).filter(Feedback.rating == "up").count()
+    down_count = db.query(Feedback).filter(Feedback.rating == "down").count()
+    total_feedback = up_count + down_count
+    down_rate = round((down_count / total_feedback) * 100, 1) if total_feedback else 0.0
+
+    # Conversation volume for each of the last 7 days (including today),
+    # oldest first - simple enough to drive a small bar/line chart.
+    today = datetime.utcnow().date()
+    traffic = []
+    for i in range(6, -1, -1):
+        day = today - timedelta(days=i)
+        count = sum(1 for c in all_conversations if c.created_at.date() == day)
+        traffic.append({"date": day.isoformat(), "count": count})
+
+    return {
+        "resolved_count": resolved_count,
+        "active_count": active_count,
+        "unresolved_count": unresolved_count,
+        "top_categories": top_categories,
+        "feedback": {"up": up_count, "down": down_count, "down_rate_percent": down_rate},
+        "traffic": traffic,
+    }
+
+
+@app.post("/agent/analytics/faq")
+def generate_faq(db: Session = Depends(get_db), agent_id: int = Depends(get_current_agent)):
+    """
+    Reads recent real student questions and asks the local model to
+    summarize the most common themes into a short FAQ. Excludes button-click
+    text (exact category-tree matches and the escalation trigger) so it
+    focuses on freely typed questions. Runs the AI on demand rather than on
+    a schedule - this can take a while on CPU-only hardware.
+    """
+    known_leaf_texts = set(LEAF_TO_CATEGORY.keys())
+
+    recent_user_messages = (
+        db.query(Message)
+        .filter(Message.role == "user")
+        .order_by(Message.id.desc())
+        .limit(200)
+        .all()
+    )
+
+    questions = []
+    seen = set()
+    for m in recent_user_messages:
+        text = m.content.strip()
+        if text in known_leaf_texts or text in seen or not text:
+            continue
+        seen.add(text)
+        questions.append(text)
+
+    faq_text = generate_faq_summary(questions)
+    return {"faq": faq_text, "questions_analyzed": len(questions)}
 
 
 @app.post("/api/chat", response_model=ChatResponse)
