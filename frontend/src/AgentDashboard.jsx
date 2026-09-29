@@ -6,12 +6,37 @@ import './AgentDashboard.css';
 const API_BASE = 'http://localhost:8000';
 const WS_BASE = API_BASE.replace(/^http/, 'ws');
 
+const TICKET_LABELS = {
+  open: 'مفتوحة',
+  in_progress: 'قيد المعالجة',
+  resolved: 'تم الحل',
+};
+
 const mapBackendMessage = (m) => ({
   id: m.id,
   role: m.role, // "user" | "assistant" | "agent"
   content: m.content,
   created_at: m.created_at,
 });
+
+// Backend timestamps are naive UTC (datetime.utcnow), so append "Z" so the
+// browser converts them to the agent's local time correctly.
+const formatDate = (iso) =>
+  new Date(iso + 'Z').toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
+
+function MessageBubble({ msg }) {
+  return (
+    <div className={`dashboard-message-wrapper ${msg.role}`}>
+      <div className="dashboard-message" dir="auto">
+        {msg.role === 'assistant' ? (
+          <ReactMarkdown>{msg.content}</ReactMarkdown>
+        ) : (
+          msg.content
+        )}
+      </div>
+    </div>
+  );
+}
 
 function AgentDashboard() {
   const navigate = useNavigate();
@@ -25,9 +50,17 @@ function AgentDashboard() {
   const [input, setInput] = useState('');
   const [resolving, setResolving] = useState(false);
 
+  // Beneficiary profile panel state
+  const [showProfile, setShowProfile] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
   const presenceWsRef = useRef(null);
   const queueWsRef = useRef(null);
   const chatWsRef = useRef(null);
+
+  const selectedConversation = queue.find((c) => c.conversation_id === selectedConversationId);
 
   // Redirect to login if there's no session at all — this page requires
   // an authenticated agent.
@@ -112,6 +145,30 @@ function AgentDashboard() {
 
   const handleSelectConversation = (conversationId) => {
     setSelectedConversationId(conversationId);
+    setShowProfile(false);
+    setProfile(null);
+
+    // Opening an "open" conversation claims it: move it to "in_progress".
+    const conversation = queue.find((c) => c.conversation_id === conversationId);
+    if (conversation && conversation.ticket_status === 'open') {
+      fetch(`${API_BASE}/agent/conversation/${conversationId}/status`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken,
+        },
+        body: JSON.stringify({ ticket_status: 'in_progress' }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to mark in progress');
+          setQueue((prev) =>
+            prev.map((c) =>
+              c.conversation_id === conversationId ? { ...c, ticket_status: 'in_progress' } : c
+            )
+          );
+        })
+        .catch((err) => console.error('In-progress update failed:', err));
+    }
   };
 
   const handleSend = (e) => {
@@ -124,6 +181,29 @@ function AgentDashboard() {
       agent_id: Number(agentId),
     }));
     setInput('');
+  };
+
+  const handleOpenProfile = async () => {
+    if (!selectedConversation?.university_id) return;
+
+    setShowProfile(true);
+    setProfile(null);
+    setProfileError('');
+    setProfileLoading(true);
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/agent/beneficiary/${encodeURIComponent(selectedConversation.university_id)}`,
+        { headers: { 'x-session-token': sessionToken } }
+      );
+      if (!res.ok) throw new Error('Failed to load profile');
+      setProfile(await res.json());
+    } catch (err) {
+      console.error('Profile fetch failed:', err);
+      setProfileError('تعذر تحميل ملف الطالب');
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   const handleResolve = async () => {
@@ -147,6 +227,8 @@ function AgentDashboard() {
       setQueue((prev) => prev.filter((c) => c.conversation_id !== selectedConversationId));
       setSelectedConversationId(null);
       setMessages([]);
+      setShowProfile(false);
+      setProfile(null);
     } catch (err) {
       console.error('Resolve failed:', err);
     } finally {
@@ -167,37 +249,99 @@ function AgentDashboard() {
         {selectedConversationId ? (
           <>
             <div className="dashboard-chat-header">
-              <span>محادثة: {selectedConversationId.slice(0, 8)}</span>
-              <button
-                className="dashboard-resolve-btn"
-                onClick={handleResolve}
-                disabled={resolving}
-              >
-                {resolving ? '...' : '✓ إنهاء المحادثة'}
-              </button>
+              <span>
+                {selectedConversation?.user_name
+                  ? `${selectedConversation.user_name} (${selectedConversation.university_id})`
+                  : `محادثة: ${selectedConversationId.slice(0, 8)}`}
+              </span>
+              <div className="dashboard-chat-header-actions">
+                <button
+                  className="dashboard-profile-btn"
+                  onClick={handleOpenProfile}
+                  disabled={!selectedConversation?.university_id}
+                  title={
+                    selectedConversation?.university_id
+                      ? 'عرض سجل الطالب'
+                      : 'محادثة مجهولة — لا يوجد ملف للطالب'
+                  }
+                >
+                  👤 ملف الطالب
+                </button>
+                <button
+                  className="dashboard-resolve-btn"
+                  onClick={handleResolve}
+                  disabled={resolving}
+                >
+                  {resolving ? '...' : '✓ إنهاء المحادثة'}
+                </button>
+              </div>
             </div>
-            <div className="dashboard-messages-area">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`dashboard-message-wrapper ${msg.role}`}>
-                  <div className="dashboard-message" dir="auto">
-                    {msg.role === 'assistant' ? (
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    ) : (
-                      msg.content
-                    )}
-                  </div>
+
+            {showProfile ? (
+              <div className="dashboard-profile">
+                <div className="dashboard-profile-header">
+                  <button className="dashboard-back-btn" onClick={() => setShowProfile(false)}>
+                    ← العودة للمحادثة
+                  </button>
+                  {profile && (
+                    <div className="dashboard-profile-info">
+                      <div className="dashboard-profile-name">{profile.name}</div>
+                      <div className="dashboard-profile-id">{profile.university_id}</div>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-            <form onSubmit={handleSend} className="dashboard-input-area">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="اكتب ردك..."
-              />
-              <button type="submit">إرسال</button>
-            </form>
+
+                {profileLoading && <div className="dashboard-empty-state">جارٍ التحميل...</div>}
+                {profileError && <div className="dashboard-empty-state">{profileError}</div>}
+
+                {profile && (
+                  <div className="dashboard-profile-list">
+                    <div className="dashboard-profile-count">
+                      عدد المحادثات: {profile.conversations.length}
+                    </div>
+                    {profile.conversations.map((c) => (
+                      <details
+                        key={c.conversation_id}
+                        className="dashboard-profile-conversation"
+                        open={c.conversation_id === selectedConversationId}
+                      >
+                        <summary>
+                          <span dir="ltr">{formatDate(c.created_at)}</span>
+                          <span className={`dashboard-ticket-badge ${c.ticket_status}`}>
+                            {TICKET_LABELS[c.ticket_status] || c.ticket_status}
+                          </span>
+                          {c.conversation_id === selectedConversationId && (
+                            <span className="dashboard-current-tag">(الحالية)</span>
+                          )}
+                        </summary>
+                        <div className="dashboard-profile-messages">
+                          {c.messages.map((msg) => (
+                            <MessageBubble key={msg.id} msg={msg} />
+                          ))}
+                        </div>
+                      </details>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <div className="dashboard-messages-area">
+                  {messages.map((msg) => (
+                    <MessageBubble key={msg.id} msg={msg} />
+                  ))}
+                </div>
+                <form onSubmit={handleSend} className="dashboard-input-area">
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="اكتب ردك..."
+                  />
+                  <button type="submit">إرسال</button>
+                </form>
+              </>
+            )}
           </>
         ) : (
           <div className="dashboard-empty-state">اختر محادثة من القائمة للبدء</div>
@@ -217,11 +361,15 @@ function AgentDashboard() {
           {queue.map((c) => (
             <button
               key={c.conversation_id}
-              className={`dashboard-queue-item ${selectedConversationId === c.conversation_id ? 'active' : ''}`}
+              className={`dashboard-queue-item ${c.ticket_status} ${
+                selectedConversationId === c.conversation_id ? 'active' : ''
+              }`}
               onClick={() => handleSelectConversation(c.conversation_id)}
             >
               <span className="dashboard-queue-dot" />
-              <span className="dashboard-queue-label">{c.conversation_id.slice(0, 8)}</span>
+              <span className="dashboard-queue-label">
+                {c.user_name || c.conversation_id.slice(0, 8)}
+              </span>
             </button>
           ))}
         </div>
