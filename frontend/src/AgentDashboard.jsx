@@ -24,6 +24,9 @@ const mapBackendMessage = (m) => ({
 const formatDate = (iso) =>
   new Date(iso + 'Z').toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 
+const formatDay = (isoDate) =>
+  new Date(isoDate).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric' });
+
 function MessageBubble({ msg }) {
   return (
     <div className={`dashboard-message-wrapper ${msg.role}`}>
@@ -38,12 +41,149 @@ function MessageBubble({ msg }) {
   );
 }
 
+function AnalyticsView({ sessionToken }) {
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [faq, setFaq] = useState(null);
+  const [faqLoading, setFaqLoading] = useState(false);
+  const [faqError, setFaqError] = useState('');
+
+  useEffect(() => {
+    setLoading(true);
+    setError('');
+    fetch(`${API_BASE}/agent/analytics`, {
+      headers: { 'x-session-token': sessionToken },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load analytics');
+        return res.json();
+      })
+      .then((data) => setStats(data))
+      .catch(() => setError('تعذر تحميل الإحصائيات'))
+      .finally(() => setLoading(false));
+  }, [sessionToken]);
+
+  const handleGenerateFaq = async () => {
+    setFaqLoading(true);
+    setFaqError('');
+    setFaq(null);
+    try {
+      const res = await fetch(`${API_BASE}/agent/analytics/faq`, {
+        method: 'POST',
+        headers: { 'x-session-token': sessionToken },
+      });
+      if (!res.ok) throw new Error('Failed to generate FAQ');
+      setFaq(await res.json());
+    } catch (err) {
+      console.error('FAQ generation failed:', err);
+      setFaqError('تعذر إنشاء الأسئلة الشائعة');
+    } finally {
+      setFaqLoading(false);
+    }
+  };
+
+  if (loading) return <div className="dashboard-empty-state">جارٍ تحميل الإحصائيات...</div>;
+  if (error) return <div className="dashboard-empty-state">{error}</div>;
+  if (!stats) return null;
+
+  const maxTraffic = Math.max(1, ...stats.traffic.map((d) => d.count));
+
+  return (
+    <div className="dashboard-analytics">
+      <div className="dashboard-stats-row">
+        <div className="dashboard-stat-card resolved">
+          <div className="dashboard-stat-number">{stats.resolved_count}</div>
+          <div className="dashboard-stat-label">محلولة</div>
+        </div>
+        <div className="dashboard-stat-card active">
+          <div className="dashboard-stat-number">{stats.active_count}</div>
+          <div className="dashboard-stat-label">نشط</div>
+        </div>
+        <div className="dashboard-stat-card unresolved">
+          <div className="dashboard-stat-number">{stats.unresolved_count}</div>
+          <div className="dashboard-stat-label">غير محلولة</div>
+        </div>
+      </div>
+
+      <div className="dashboard-analytics-section">
+        <div className="dashboard-analytics-title">الفئات الأكثر تكراراً</div>
+        {stats.top_categories.length === 0 ? (
+          <div className="dashboard-analytics-empty">لا توجد بيانات كافية بعد</div>
+        ) : (
+          <div className="dashboard-category-list">
+            {stats.top_categories.map((c) => (
+              <div key={c.category} className="dashboard-category-row">
+                <span className="dashboard-category-count">{c.count}</span>
+                <span className="dashboard-category-name">{c.category}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="dashboard-analytics-section">
+        <div className="dashboard-analytics-title">حركة المحادثات (آخر 7 أيام)</div>
+        <div className="dashboard-traffic-chart">
+          {stats.traffic.map((d) => (
+            <div key={d.date} className="dashboard-traffic-bar-wrapper">
+              <div
+                className="dashboard-traffic-bar"
+                style={{ height: `${Math.max(4, (d.count / maxTraffic) * 100)}%` }}
+                title={`${d.count}`}
+              />
+              <span className="dashboard-traffic-day">{formatDay(d.date)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="dashboard-analytics-section">
+        <div className="dashboard-analytics-title">
+          التقييمات — 👍 {stats.feedback.up} · 👎 {stats.feedback.down}
+          {stats.feedback.down + stats.feedback.up > 0 && (
+            <span className="dashboard-down-rate"> ({stats.feedback.down_rate_percent}% سلبي)</span>
+          )}
+        </div>
+      </div>
+
+      <div className="dashboard-analytics-section">
+        <div className="dashboard-analytics-title-row">
+          <div className="dashboard-analytics-title">الأسئلة الشائعة (بالذكاء الاصطناعي)</div>
+          <button
+            className="dashboard-faq-btn"
+            onClick={handleGenerateFaq}
+            disabled={faqLoading}
+          >
+            {faqLoading ? 'جارٍ التحليل...' : '✨ إنشاء الأسئلة الشائعة'}
+          </button>
+        </div>
+        {faqLoading && (
+          <div className="dashboard-analytics-empty">
+            قد يستغرق هذا بضع دقائق حسب عدد الأسئلة...
+          </div>
+        )}
+        {faqError && <div className="dashboard-analytics-empty">{faqError}</div>}
+        {faq && (
+          <div className="dashboard-faq-result" dir="auto">
+            <div className="dashboard-faq-meta">
+              تم تحليل {faq.questions_analyzed} سؤال
+            </div>
+            <ReactMarkdown>{faq.faq}</ReactMarkdown>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AgentDashboard() {
   const navigate = useNavigate();
   const agentName = localStorage.getItem('agent_name');
   const agentId = localStorage.getItem('agent_id');
   const sessionToken = localStorage.getItem('agent_session');
 
+  const [activeTab, setActiveTab] = useState('queue'); // "queue" | "analytics"
   const [queue, setQueue] = useState([]);
   const [selectedConversationId, setSelectedConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -144,6 +284,7 @@ function AgentDashboard() {
   }, [selectedConversationId]);
 
   const handleSelectConversation = (conversationId) => {
+    setActiveTab('queue');
     setSelectedConversationId(conversationId);
     setShowProfile(false);
     setProfile(null);
@@ -246,7 +387,14 @@ function AgentDashboard() {
   return (
     <div className="dashboard-container" dir="rtl">
       <div className="dashboard-main">
-        {selectedConversationId ? (
+        {activeTab === 'analytics' ? (
+          <>
+            <div className="dashboard-chat-header">
+              <span>الإحصائيات</span>
+            </div>
+            <AnalyticsView sessionToken={sessionToken} />
+          </>
+        ) : selectedConversationId ? (
           <>
             <div className="dashboard-chat-header">
               <span>
@@ -353,7 +501,22 @@ function AgentDashboard() {
           <span>{agentName}</span>
           <button onClick={handleLogout} className="dashboard-logout-btn">تسجيل الخروج</button>
         </div>
-        <div className="dashboard-sidebar-title">لوحة التحكم</div>
+
+        <div className="dashboard-tabs">
+          <button
+            className={`dashboard-tab ${activeTab === 'queue' ? 'active' : ''}`}
+            onClick={() => setActiveTab('queue')}
+          >
+            لوحة التحكم
+          </button>
+          <button
+            className={`dashboard-tab ${activeTab === 'analytics' ? 'active' : ''}`}
+            onClick={() => setActiveTab('analytics')}
+          >
+            📊 الإحصائيات
+          </button>
+        </div>
+
         <div className="dashboard-queue-list">
           {queue.length === 0 && (
             <div className="dashboard-empty-queue">لا توجد محادثات بانتظار الرد</div>
@@ -362,7 +525,7 @@ function AgentDashboard() {
             <button
               key={c.conversation_id}
               className={`dashboard-queue-item ${c.ticket_status} ${
-                selectedConversationId === c.conversation_id ? 'active' : ''
+                activeTab === 'queue' && selectedConversationId === c.conversation_id ? 'active' : ''
               }`}
               onClick={() => handleSelectConversation(c.conversation_id)}
             >
