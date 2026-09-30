@@ -1,3 +1,13 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
 .dashboard-container {
   display: flex;
   height: 100vh;
@@ -12,6 +22,7 @@
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+  overflow-x: hidden;
 }
 
 .dashboard-sidebar-header {
@@ -37,16 +48,10 @@
   background: rgba(255,255,255,0.1);
 }
 
-.dashboard-sidebar-title {
-  padding: 0.75rem 1rem;
-  font-size: 0.85rem;
-  opacity: 0.8;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
 .dashboard-queue-list {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .dashboard-queue-item {
@@ -62,6 +67,7 @@
   text-align: right;
   cursor: pointer;
   font-size: 0.9rem;
+  min-width: 0;
 }
 
 .dashboard-queue-item:hover {
@@ -80,6 +86,13 @@
   flex-shrink: 0;
 }
 
+.dashboard-queue-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 /* Green = new and waiting, blue = an agent has opened it. */
 .dashboard-queue-item.in_progress .dashboard-queue-dot {
   background: #60a5fa;
@@ -96,6 +109,7 @@
   display: flex;
   flex-direction: column;
   background: white;
+  min-width: 0;
 }
 
 .dashboard-chat-header {
@@ -357,33 +371,30 @@
   color: #005eb8;
 }
 
-/* ---------- Sidebar tabs ---------- */
+/* ---------- Analytics toggle ---------- */
 
-.dashboard-tabs {
-  display: flex;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
-.dashboard-tab {
-  flex: 1;
+.dashboard-analytics-toggle {
+  width: 100%;
   background: none;
   border: none;
-  color: rgba(255,255,255,0.7);
-  padding: 0.7rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.8);
+  padding: 0.8rem 1rem;
   font-size: 0.85rem;
+  font-weight: 600;
+  text-align: right;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
   margin: 0;
 }
 
-.dashboard-tab:hover {
+.dashboard-analytics-toggle:hover {
   background: rgba(255,255,255,0.06);
 }
 
-.dashboard-tab.active {
+.dashboard-analytics-toggle.active {
   color: white;
-  border-bottom-color: #60a5fa;
-  font-weight: 600;
+  background: rgba(96,165,250,0.18);
+  border-inline-start: 3px solid #60a5fa;
 }
 
 /* ---------- Analytics view ---------- */
@@ -413,6 +424,11 @@
 .dashboard-stat-card.resolved { background: #166534; }
 .dashboard-stat-card.active { background: #1e40af; }
 .dashboard-stat-card.unresolved { background: #92400e; }
+
+.dashboard-stat-icon {
+  font-size: 1.4rem;
+  margin-bottom: 2px;
+}
 
 .dashboard-stat-number {
   font-size: 2rem;
@@ -456,10 +472,12 @@
   font-size: 0.85rem;
 }
 
+/* ---------- Category mini progress bars ---------- */
+
 .dashboard-category-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
 .dashboard-category-row {
@@ -477,12 +495,36 @@
   padding: 2px 10px;
   min-width: 28px;
   text-align: center;
+  flex-shrink: 0;
 }
 
-.dashboard-down-rate {
-  color: #dc2626;
+.dashboard-category-bar-track {
+  position: relative;
+  flex: 1;
+  background: #f1f5f9;
+  border-radius: 6px;
+  overflow: hidden;
+  height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-category-bar-fill {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  background: #93c5fd;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.dashboard-category-name {
+  position: relative;
+  padding: 0 10px;
   font-weight: 600;
-  font-size: 0.85rem;
+  color: #1e293b;
+  z-index: 1;
 }
 
 /* ---------- Traffic bar chart ---------- */
@@ -491,7 +533,7 @@
   display: flex;
   align-items: flex-end;
   gap: 10px;
-  height: 100px;
+  height: 120px;
 }
 
 .dashboard-traffic-bar-wrapper {
@@ -501,6 +543,13 @@
   align-items: center;
   justify-content: flex-end;
   height: 100%;
+}
+
+.dashboard-traffic-value {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin-bottom: 4px;
 }
 
 .dashboard-traffic-bar {
@@ -514,6 +563,49 @@
   font-size: 0.7rem;
   color: #64748b;
   margin-top: 4px;
+}
+
+/* ---------- Feedback cards ---------- */
+
+.dashboard-feedback-row {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard-feedback-card {
+  flex: 1;
+  text-align: center;
+  padding: 0.8rem;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.dashboard-feedback-card.up {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.dashboard-feedback-card.down {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.dashboard-feedback-card.rate {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.dashboard-feedback-number {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.dashboard-feedback-label {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-top: 2px;
 }
 
 /* ---------- FAQ generation ---------- */

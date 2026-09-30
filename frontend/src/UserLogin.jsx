@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logo from './assets/logo.png';
+import './Login.css';
 
 function UserLogin() {
   const [universityId, setUniversityId] = useState('');
@@ -34,26 +36,29 @@ function UserLogin() {
   return (
     <div className="login-container" dir="rtl">
       <form className="login-box" onSubmit={handleLogin}>
-        <h2>دخول المستفيدين (KSU)</h2>
+        <div className="login-logo">
+          <img src={logo} alt="المساعد الذكي" />
+        </div>
+        <h2>المساعد الذكي</h2>
         {error && <p className="error-text">{error}</p>}
-        
-        <label>الرقم الجامعي / الوظيفي</label>
-        <input 
-          type="text" 
-          value={universityId} 
-          onChange={(e) => setUniversityId(e.target.value)} 
-          required 
+
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="الاسم"
+          required
         />
 
-        <label>الاسم الكامل</label>
-        <input 
-          type="text" 
-          value={name} 
-          onChange={(e) => setName(e.target.value)} 
-          required 
+        <input
+          type="text"
+          value={universityId}
+          onChange={(e) => setUniversityId(e.target.value)}
+          placeholder="الرقم الجامعي او الحساب الجامعي"
+          required
         />
 
-        <button type="submit">بدء المحادثة</button>
+        <button type="submit">تسجيل</button>
       </form>
     </div>
   );

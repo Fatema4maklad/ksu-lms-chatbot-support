@@ -1,0 +1,95 @@
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f5f7;
+  font-family: sans-serif;
+}
+
+.login-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.login-logo {
+  width: 140px;
+  height: 140px;
+  background: #ffffff;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.login-logo img {
+  width: 105px;
+  height: 105px;
+  object-fit: contain;
+}
+
+.login-box h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1e293b;
+  text-align: center;
+}
+
+.login-box label {
+  display: none; /* mockup uses placeholder text inside the input instead of a separate label */
+}
+
+.login-box input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  border: 1px solid #e2c98a;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  background: #fffdf8;
+  text-align: right;
+}
+
+.login-box input:focus {
+  outline: none;
+  border-color: #c9a227;
+}
+
+.login-box input::placeholder {
+  color: #94a3b8;
+}
+
+.login-box button {
+  width: 100%;
+  margin: 8px 0 0 0;
+  padding: 13px;
+  background: #0b3d75;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.login-box button:hover:not(:disabled) {
+  background: #08305e;
+}
+
+.error-text {
+  color: #dc2626;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  text-align: center;
+}

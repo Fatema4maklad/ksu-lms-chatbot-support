@@ -1,22 +1,22 @@
 .chat-container {
-  max-width: 600px;
-  margin: 2rem auto;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+  width: 100%;
+  max-width: 900px;
+  height: 100vh;
+  margin: 0 auto;
+  border-inline: 1px solid #e2e8f0;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
-  height: 80vh;
   font-family: sans-serif;
   background: white;
   direction: ltr;
 }
 
 header {
-  background: #005eb8;
+  background: #0b3d75;
   color: white;
   padding: 1rem;
   text-align: center;
-  border-radius: 8px 8px 0 0;
   margin: 0;
 }
 
@@ -26,9 +26,9 @@ header h2 {
 }
 
 .escalation-banner {
-  background: #eaf3fc;
-  color: #005eb8;
-  border-bottom: 1px solid #cbd5e1;
+  background: #fdf8ec;
+  color: #0b3d75;
+  border-bottom: 1px solid #e2c98a;
   padding: 10px 16px;
   font-size: 0.85rem;
   font-weight: 600;
@@ -93,7 +93,7 @@ header h2 {
 }
 
 .message-wrapper.user .message {
-  background: #005eb8;
+  background: #0b3d75;
   color: #ffffff;
   border: none;
   border-radius: 16px 16px 4px 16px;
@@ -125,9 +125,9 @@ header h2 {
 }
 
 .option-chip {
-  background: #f8fafc;
-  color: #005eb8;
-  border: 1px solid #cbd5e1;
+  background: #fffdf8;
+  color: #0b3d75;
+  border: 1px solid #e2c98a;
   border-radius: 20px;
   padding: 8px 16px;
   font-size: 14px;
@@ -148,27 +148,27 @@ header h2 {
   padding: 1rem;
   border-top: 1px solid #ccc;
   background: white;
-  border-radius: 0 0 8px 8px;
   direction: ltr;
 }
 
 input {
   flex: 1;
   padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  border: 1px solid #e2c98a;
+  border-radius: 10px;
   font-size: 16px;
+  background: #fffdf8;
 }
 
 input:focus {
   outline: none;
-  border-color: #005eb8;
+  border-color: #c9a227;
 }
 
 button {
   margin-left: 10px;
   padding: 10px 24px;
-  background: #005eb8;
+  background: #0b3d75;
   color: white;
   border: none;
   border-radius: 6px;
@@ -178,7 +178,7 @@ button {
 }
 
 button:hover:not(:disabled) {
-  background: #004a94;
+  background: #08305e;
 }
 
 button:disabled {

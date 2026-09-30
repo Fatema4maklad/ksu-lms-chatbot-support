@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import logo from './assets/logo.png';
+import './Login.css';
 
 function AgentLogin() {
   const [email, setEmail] = useState('');
@@ -35,26 +37,29 @@ function AgentLogin() {
   return (
     <div className="login-container" dir="rtl">
       <form className="login-box agent-box" onSubmit={handleLogin}>
-        <h2>بوابة الدعم الفني (Agents)</h2>
+        <div className="login-logo">
+          <img src={logo} alt="المساعد الذكي" />
+        </div>
+        <h2>المساعد الذكي</h2>
         {error && <p className="error-text">{error}</p>}
-        
-        <label>البريد الإلكتروني</label>
-        <input 
-          type="email" 
-          value={email} 
-          onChange={(e) => setEmail(e.target.value)} 
-          required 
+
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="الايميل"
+          required
         />
 
-        <label>كلمة المرور</label>
-        <input 
-          type="password" 
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)} 
-          required 
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="كلمة المرور"
+          required
         />
 
-        <button type="submit">تسجيل الدخول</button>
+        <button type="submit">تسجيل</button>
       </form>
     </div>
   );

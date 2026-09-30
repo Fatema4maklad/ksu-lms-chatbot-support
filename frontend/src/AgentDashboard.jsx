@@ -88,19 +88,24 @@ function AnalyticsView({ sessionToken }) {
   if (!stats) return null;
 
   const maxTraffic = Math.max(1, ...stats.traffic.map((d) => d.count));
+  const maxCategory = Math.max(1, ...stats.top_categories.map((c) => c.count));
+  const totalFeedback = stats.feedback.up + stats.feedback.down;
 
   return (
     <div className="dashboard-analytics">
       <div className="dashboard-stats-row">
         <div className="dashboard-stat-card resolved">
+          <div className="dashboard-stat-icon">✅</div>
           <div className="dashboard-stat-number">{stats.resolved_count}</div>
           <div className="dashboard-stat-label">محلولة</div>
         </div>
         <div className="dashboard-stat-card active">
+          <div className="dashboard-stat-icon">🔄</div>
           <div className="dashboard-stat-number">{stats.active_count}</div>
           <div className="dashboard-stat-label">نشط</div>
         </div>
         <div className="dashboard-stat-card unresolved">
+          <div className="dashboard-stat-icon">⏳</div>
           <div className="dashboard-stat-number">{stats.unresolved_count}</div>
           <div className="dashboard-stat-label">غير محلولة</div>
         </div>
@@ -115,7 +120,13 @@ function AnalyticsView({ sessionToken }) {
             {stats.top_categories.map((c) => (
               <div key={c.category} className="dashboard-category-row">
                 <span className="dashboard-category-count">{c.count}</span>
-                <span className="dashboard-category-name">{c.category}</span>
+                <div className="dashboard-category-bar-track">
+                  <div
+                    className="dashboard-category-bar-fill"
+                    style={{ width: `${(c.count / maxCategory) * 100}%` }}
+                  />
+                  <span className="dashboard-category-name">{c.category}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -127,10 +138,10 @@ function AnalyticsView({ sessionToken }) {
         <div className="dashboard-traffic-chart">
           {stats.traffic.map((d) => (
             <div key={d.date} className="dashboard-traffic-bar-wrapper">
+              <span className="dashboard-traffic-value">{d.count}</span>
               <div
                 className="dashboard-traffic-bar"
                 style={{ height: `${Math.max(4, (d.count / maxTraffic) * 100)}%` }}
-                title={`${d.count}`}
               />
               <span className="dashboard-traffic-day">{formatDay(d.date)}</span>
             </div>
@@ -139,11 +150,22 @@ function AnalyticsView({ sessionToken }) {
       </div>
 
       <div className="dashboard-analytics-section">
-        <div className="dashboard-analytics-title">
-          التقييمات — 👍 {stats.feedback.up} · 👎 {stats.feedback.down}
-          {stats.feedback.down + stats.feedback.up > 0 && (
-            <span className="dashboard-down-rate"> ({stats.feedback.down_rate_percent}% سلبي)</span>
-          )}
+        <div className="dashboard-analytics-title">التقييمات</div>
+        <div className="dashboard-feedback-row">
+          <div className="dashboard-feedback-card up">
+            <div className="dashboard-feedback-number">{stats.feedback.up}</div>
+            <div className="dashboard-feedback-label">👍 إيجابي</div>
+          </div>
+          <div className="dashboard-feedback-card down">
+            <div className="dashboard-feedback-number">{stats.feedback.down}</div>
+            <div className="dashboard-feedback-label">👎 سلبي</div>
+          </div>
+          <div className="dashboard-feedback-card rate">
+            <div className="dashboard-feedback-number">
+              {totalFeedback > 0 ? `${stats.feedback.down_rate_percent}%` : '—'}
+            </div>
+            <div className="dashboard-feedback-label">نسبة السلبي</div>
+          </div>
         </div>
       </div>
 
@@ -502,20 +524,12 @@ function AgentDashboard() {
           <button onClick={handleLogout} className="dashboard-logout-btn">تسجيل الخروج</button>
         </div>
 
-        <div className="dashboard-tabs">
-          <button
-            className={`dashboard-tab ${activeTab === 'queue' ? 'active' : ''}`}
-            onClick={() => setActiveTab('queue')}
-          >
-            لوحة التحكم
-          </button>
-          <button
-            className={`dashboard-tab ${activeTab === 'analytics' ? 'active' : ''}`}
-            onClick={() => setActiveTab('analytics')}
-          >
-            📊 الإحصائيات
-          </button>
-        </div>
+        <button
+          className={`dashboard-analytics-toggle ${activeTab === 'analytics' ? 'active' : ''}`}
+          onClick={() => setActiveTab(activeTab === 'analytics' ? 'queue' : 'analytics')}
+        >
+          📊 الإحصائيات
+        </button>
 
         <div className="dashboard-queue-list">
           {queue.length === 0 && (
