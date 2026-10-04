@@ -199,6 +199,79 @@ function AnalyticsView({ sessionToken }) {
   );
 }
 
+function UploadView({ sessionToken }) {
+  const [file, setFile] = useState(null);
+  const [status, setStatus] = useState('');
+  const [log, setLog] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = (e) => {
+    setFile(e.target.files[0] || null);
+    setStatus('');
+    setLog([]);
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+    setUploading(true);
+    setStatus('جار الرفع...');
+    setLog([]);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch(`${API_BASE}/admin/upload-doc`, {
+        method: 'POST',
+        headers: { 'x-session-token': sessionToken },
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'فشل الرفع');
+      }
+
+      const data = await res.json();
+      setStatus('تم الانتهاء ');
+      setLog(data.ingestion_result?.log || []);
+    } catch (err) {
+      console.error('Upload failed:', err);
+      setStatus(`خطأ: ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="dashboard-analytics">
+      <div className="dashboard-analytics-section">
+        <div className="dashboard-analytics-title">رفع ملف جديد لقاعدة المعرفة (PDF)</div>
+        <input type="file" accept=".pdf" onChange={handleFileChange} />
+        <button
+          className="dashboard-faq-btn"
+          onClick={handleUpload}
+          disabled={!file || uploading}
+        >
+          {uploading ? 'جارٍ الرفع...' : ' رفع وفهرسة'}
+        </button>
+
+        {status && (
+          <div className="dashboard-analytics-empty" dir="auto">{status}</div>
+        )}
+
+        {log.length > 0 && (
+          <div className="dashboard-faq-result" dir="auto">
+            {log.map((line, i) => (
+              <div key={i}>{line}</div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function AgentDashboard() {
   const navigate = useNavigate();
   const agentName = localStorage.getItem('agent_name');
@@ -416,6 +489,13 @@ function AgentDashboard() {
             </div>
             <AnalyticsView sessionToken={sessionToken} />
           </>
+        ) : activeTab === 'upload' ? (
+          <>
+            <div className="dashboard-chat-header">
+              <span>قاعدة المعرفة</span>
+            </div>
+            <UploadView sessionToken={sessionToken} />
+          </>
         ) : selectedConversationId ? (
           <>
             <div className="dashboard-chat-header">
@@ -529,6 +609,13 @@ function AgentDashboard() {
           onClick={() => setActiveTab(activeTab === 'analytics' ? 'queue' : 'analytics')}
         >
           📊 الإحصائيات
+        </button>
+
+        <button
+          className={`dashboard-analytics-toggle ${activeTab === 'upload' ? 'active' : ''}`}
+          onClick={() => setActiveTab(activeTab === 'upload' ? 'queue' : 'upload')}
+        >
+          📄 رفع ملف
         </button>
 
         <div className="dashboard-queue-list">
